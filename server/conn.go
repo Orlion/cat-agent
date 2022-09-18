@@ -2,7 +2,6 @@ package server
 
 import (
 	"net"
-	"time"
 )
 
 type conn struct {
@@ -15,30 +14,13 @@ func (c *conn) serve() {
 	c.remoteAddr = c.rwc.RemoteAddr().String()
 
 	for {
-		w, err := c.readRequest()
-	}
-}
+		req, err := c.readRequest()
+		if err != nil {
+			return
+		}
 
-func (c *conn) readRequest() (w *response, err error) {
-	var (
-		reqDeadline time.Time
-	)
-
-	t0 := time.Now()
-	if d := c.server.ReadTimeout; d != 0 {
-		reqDeadline = t0.Add(d)
+		if handler, exists := c.server.handlers[req.Action]; exists {
+			c.sendResponse(handler(req))
+		}
 	}
-	c.rwc.SetReadDeadline(reqDeadline)
-	if d := c.server.WriteTimeout; d != 0 {
-		defer func() {
-			c.rwc.SetWriteDeadline(time.Now().Add(d))
-		}()
-	}
-
-	req, err := readRequest()
-	if err != nil {
-		return
-	}
-
-	w := &response{}
 }
