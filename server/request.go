@@ -7,17 +7,17 @@ import (
 	"time"
 )
 
-type Action uint32
+type Cmd uint32
 
 const (
-	ActionCreateMessageId Action = iota
-	ActionSendMessage
+	CmdCreateMessageId Cmd = iota
+	CmdSendMessage
 )
 
 const ReqHeaderLen = 8
 
 type Request struct {
-	Action Action
+	Cmd    Cmd
 	Length uint32
 	Body   []byte
 }
@@ -37,7 +37,7 @@ func (c *conn) readRequest() (req *Request, err error) {
 	}
 
 	req = new(Request)
-	req.Action = Action(binary.BigEndian.Uint32(buf[0:4]))
+	req.Cmd = Cmd(binary.BigEndian.Uint32(buf[0:4]))
 	req.Length = binary.BigEndian.Uint32(buf[4:4])
 
 	if req.Length > ReqHeaderLen {

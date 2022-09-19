@@ -19,7 +19,7 @@ func (c *conn) serve() {
 			return
 		}
 
-		if handler, exists := c.server.handlers[req.Action]; exists {
+		if handler, exists := c.server.handlers[req.Cmd]; exists {
 			c.sendResponse(handler(req))
 		}
 	}

@@ -12,14 +12,14 @@ import (
 
 var ErrServerClosed = errors.New("server: Server closed")
 
-type Handler func(req *Request) (status Status, body []byte)
+type Handler func(req *Request) (status Status, payload []byte)
 
 type Server struct {
 	Addr         string
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
-	handlers     map[Action]Handler
+	handlers     map[Cmd]Handler
 	mu           sync.Mutex
 	doneChan     chan struct{}
 }
