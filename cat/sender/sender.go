@@ -2,13 +2,17 @@ package sender
 
 import "github.com/Orlion/cat-agent/cat/message"
 
-type Sender struct {
+type TcpSender struct {
 	normal chan *message.MessageTree
 	high   chan *message.MessageTree
 }
 
-func (s *Sender) Offer(tree *message.MessageTree) {
-	if tree.Message.IsSuccess() {
+func NewTcpSender() *TcpSender {
+	return &TcpSender{}
+}
+
+func (s *TcpSender) Offer(tree *message.MessageTree) {
+	if tree.GetMessage().IsSuccess() {
 		select {
 		case s.normal <- tree:
 		default:

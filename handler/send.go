@@ -11,7 +11,7 @@ func SendMessage(req *server.Request) (status server.Status, payload []byte) {
 		body: req.Body,
 	}
 
-	header, err := r.readHeader()
+	_, err := r.readHeader()
 	if err != nil {
 
 	}
