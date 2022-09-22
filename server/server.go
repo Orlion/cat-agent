@@ -1,27 +1,58 @@
 package server
 
 import (
-	"context"
+	"bufio"
 	"errors"
 	"net"
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/Orlion/cat-agent/log"
 )
 
-var ErrServerClosed = errors.New("server: Server closed")
+var (
+	ErrServerClosed      = errors.New("server: Server closed")
+	shutdownPollInterval = 500 * time.Millisecond
+)
 
 type Handler func(req *Request) (status Status, payload []byte)
+
+type atomicBool int32
+
+func (b *atomicBool) isSet() bool { return atomic.LoadInt32((*int32)(b)) != 0 }
+func (b *atomicBool) setTrue()    { atomic.StoreInt32((*int32)(b), 1) }
+func (b *atomicBool) setFalse()   { atomic.StoreInt32((*int32)(b), 0) }
 
 type Server struct {
 	Addr         string
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
-	handlers     map[Cmd]Handler
-	mu           sync.Mutex
-	doneChan     chan struct{}
+
+	handlers map[Cmd]Handler
+
+	inShutdown atomicBool
+
+	mu       sync.Mutex
+	listener net.Listener
+	doneChan chan struct{}
+}
+
+func NewServer(config *Config) *Server {
+	return &Server{
+		Addr:         config.Addr,
+		ReadTimeout:  time.Duration(config.ReadTimeoutMillis) * time.Millisecond,
+		WriteTimeout: time.Duration(config.WriteTimeoutMillis) * time.Millisecond,
+		IdleTimeout:  time.Duration(config.IdleTimeoutMillis) * time.Millisecond,
+		handlers:     make(map[Cmd]Handler),
+	}
+}
+
+func (srv *Server) Handle(cmd Cmd, handler Handler) {
+	srv.handlers[cmd] = handler
 }
 
 func (srv *Server) ListenAndServe() error {
@@ -37,10 +68,12 @@ func (srv *Server) ListenAndServe() error {
 		return err
 	}
 
-	return srv.Serve(ln)
+	return srv.serve(ln)
 }
 
-func (srv *Server) Serve(ln net.Listener) error {
+func (srv *Server) serve(ln net.Listener) error {
+	log.Infof("server listen on %s...", srv.Addr)
+
 	var tempDelay time.Duration // how long to sleep on accept failure
 
 	for {
@@ -53,6 +86,7 @@ func (srv *Server) Serve(ln net.Listener) error {
 			}
 
 			if ne, ok := err.(net.Error); ok && ne.Temporary() {
+				log.Warnf("server accept temporary error: %s, tempDelay: %d", err, tempDelay)
 				if tempDelay == 0 {
 					tempDelay = 5 * time.Millisecond
 				} else {
@@ -74,8 +108,20 @@ func (srv *Server) Serve(ln net.Listener) error {
 	}
 }
 
-func (src *Server) Shutdown(ctx context.Context) {
+func (srv *Server) Shutdown() error {
+	srv.inShutdown.setTrue()
 
+	srv.mu.Lock()
+	defer srv.mu.Unlock()
+
+	lnerr := srv.listener.Close()
+	srv.closeDoneChanLocked()
+
+	return lnerr
+}
+
+func (srv *Server) shuttingDown() bool {
+	return srv.inShutdown.isSet()
 }
 
 func (s *Server) getDoneChan() <-chan struct{} {
@@ -91,10 +137,20 @@ func (s *Server) getDoneChanLocked() chan struct{} {
 	return s.doneChan
 }
 
+func (s *Server) closeDoneChanLocked() {
+	ch := s.getDoneChanLocked()
+	select {
+	case <-ch:
+	default:
+		close(ch)
+	}
+}
+
 func (srv *Server) newConn(rwc net.Conn) *conn {
 	c := &conn{
 		server: srv,
 		rwc:    rwc,
+		bufr:   bufio.NewReader(rwc),
 	}
 
 	return c

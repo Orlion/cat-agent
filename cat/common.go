@@ -1,7 +1,6 @@
 package cat
 
 import (
-	"strconv"
 	"strings"
 )
 
@@ -10,7 +9,7 @@ type serverAddress struct {
 	port int
 }
 
-func resolveServerAddresses(router string) (addresses []serverAddress) {
+func resolveServerAddresses(router string) (addresses []string) {
 	for _, segment := range strings.Split(router, ";") {
 		if len(segment) == 0 {
 			continue
@@ -20,14 +19,9 @@ func resolveServerAddresses(router string) (addresses []serverAddress) {
 			continue
 		}
 
-		if port, err := strconv.Atoi(fragments[1]); err != nil {
-		} else {
-			addresses = append(addresses, serverAddress{
-				host: fragments[0],
-				port: port,
-			})
-		}
+		addresses = append(addresses, segment)
 	}
+
 	return
 }
 

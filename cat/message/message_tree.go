@@ -1,9 +1,6 @@
 package message
 
 type MessageTree struct {
-	domain          string
-	hostname        string
-	ipAddress       string
 	message         Message
 	messageId       string
 	parentMessageId string
@@ -14,11 +11,8 @@ type MessageTree struct {
 	discard         bool
 }
 
-func NewMessageTree(domain, hostname, ipAddress string, message Message, messageId, parentMessageId, rootMessageId, threadGroupName, threadId, threadName string, discard bool) *MessageTree {
+func NewMessageTree(message Message, messageId, parentMessageId, rootMessageId, threadGroupName, threadId, threadName string, discard bool) *MessageTree {
 	return &MessageTree{
-		domain:          domain,
-		hostname:        hostname,
-		ipAddress:       ipAddress,
 		message:         message,
 		messageId:       messageId,
 		parentMessageId: parentMessageId,
@@ -28,18 +22,6 @@ func NewMessageTree(domain, hostname, ipAddress string, message Message, message
 		threadName:      threadName,
 		discard:         discard,
 	}
-}
-
-func (tree *MessageTree) GetDomain() string {
-	return tree.domain
-}
-
-func (tree *MessageTree) GetHostname() string {
-	return tree.hostname
-}
-
-func (tree *MessageTree) GetIpAddress() string {
-	return tree.ipAddress
 }
 
 func (tree *MessageTree) GetMessage() Message {

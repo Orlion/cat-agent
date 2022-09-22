@@ -1,4 +1,4 @@
-package analyzer
+package manager
 
 import "github.com/Orlion/cat-agent/cat/message"
 
@@ -7,29 +7,32 @@ type LocalAggregator struct {
 	ea *EventAggregator
 }
 
-func NewLocalAggregator() *LocalAggregator {
-	return &LocalAggregator{}
+func newLocalAggregator(manager *Manager) *LocalAggregator {
+	return &LocalAggregator{
+		ta: newTransactionAggregator(manager),
+		ea: newEventAggregator(manager),
+	}
 }
 
-func (la *LocalAggregator) Aggregate(tree *message.MessageTree) {
+func (la *LocalAggregator) aggregate(tree *message.MessageTree) {
 	msg := tree.GetMessage()
 	switch msg.(type) {
 	case *message.Transaction:
-		la.analyzerProcessTransaction(tree.GetDomain(), msg.(*message.Transaction))
+		la.analyzerProcessTransaction(msg.(*message.Transaction))
 	case *message.Event:
 	default:
 	}
 }
 
-func (la *LocalAggregator) analyzerProcessTransaction(domain string, transaction *message.Transaction) {
-	la.ta.logTransaction(domain, transaction)
+func (la *LocalAggregator) analyzerProcessTransaction(transaction *message.Transaction) {
+	la.ta.logTransaction(transaction)
 
 	for _, child := range transaction.GetChildren() {
 		switch child.(type) {
 		case *message.Transaction:
-			la.analyzerProcessTransaction(domain, child.(*message.Transaction))
+			la.analyzerProcessTransaction(child.(*message.Transaction))
 		case *message.Event:
-			la.ea.logEvent(domain, child.(*message.Event))
+			la.ea.logEvent(child.(*message.Event))
 		}
 	}
 }

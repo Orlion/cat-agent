@@ -1,4 +1,4 @@
-package analyzer
+package manager
 
 const (
 	typeSystem = "System"
@@ -10,4 +10,8 @@ const (
 
 	batchFlag  = '@'
 	batchSplit = ';'
+
+	ThreadIdCatAgent        = "0"
+	ThreadNameCatAgent      = "cat-agent"
+	ThreadGroupNameCatAgent = "cat-agent-group"
 )

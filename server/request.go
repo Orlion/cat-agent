@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bufio"
 	"encoding/binary"
 	"io"
 	"time"
@@ -27,11 +26,9 @@ func (c *conn) readRequest() (req *Request, err error) {
 		c.rwc.SetReadDeadline(time.Now().Add(c.server.ReadTimeout))
 	}
 
-	bufr := bufio.NewReader(c.rwc)
-
 	// read header
 	buf := make([]byte, 8)
-	_, err = io.ReadFull(bufr, buf)
+	_, err = io.ReadFull(c.bufr, buf)
 	if err != nil {
 		return
 	}
@@ -43,7 +40,7 @@ func (c *conn) readRequest() (req *Request, err error) {
 	if req.Length > ReqHeaderLen {
 		// read body
 		req.Body = make([]byte, req.Length-8)
-		_, err = io.ReadFull(bufr, req.Body)
+		_, err = io.ReadFull(c.bufr, req.Body)
 		if err != nil {
 			return
 		}
