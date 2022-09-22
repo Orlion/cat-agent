@@ -21,10 +21,10 @@ func newManager() *Manager {
 	}
 }
 
-func (m *Manager) flush(domain string, hostname string, ipAddress string, msg message.Message, messageId string, parentMessageId string, rootMessageId string, threadGroupName string, threadId string, threadName string) {
-	tree := message.NewMessageTree(domain, hostname, ipAddress, msg, messageId, parentMessageId, rootMessageId, threadGroupName, threadId, threadName)
+func (m *Manager) flush(domain string, hostname string, ipAddress string, msg message.Message, messageId string, parentMessageId string, rootMessageId string, threadGroupName string, threadId string, threadName string, discard bool) {
+	tree := message.NewMessageTree(domain, hostname, ipAddress, msg, messageId, parentMessageId, rootMessageId, threadGroupName, threadId, threadName, discard)
 
-	if tree.GetMessage().GetStatus() == message.SUCCESS && m.isHitSample() {
+	if tree.CanDiscard() && m.isHitSample() {
 		m.aggregator.Aggregate(tree)
 	} else {
 		m.sender.Offer(tree)

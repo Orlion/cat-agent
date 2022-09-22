@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/Orlion/cat-agent/cat"
 	"github.com/Orlion/cat-agent/cat/message"
 )
 
@@ -60,18 +61,20 @@ func (td *transactionData) encode() string {
 }
 
 type TransactionAggregator struct {
-	transactions map[string]*transactionData
+	datas map[string]map[string]*transactionData
 }
 
-func (ta *TransactionAggregator) logTransaction(transaction *message.Transaction) {
-	ta.getOrDefault(transaction).add(transaction)
+func (ta *TransactionAggregator) logTransaction(domain string, transaction *message.Transaction) {
+	ta.getOrDefault(domain, transaction).add(transaction)
 }
 
-func (ta *TransactionAggregator) getOrDefault(transaction *message.Transaction) *transactionData {
+func (ta *TransactionAggregator) getOrDefault(domain string, transaction *message.Transaction) *transactionData {
+	var data *transactionData
+
 	key := fmt.Sprintf("%s,%s", transaction.GetType(), transaction.GetName())
 
-	data, ok := ta.transactions[key]
-	if !ok {
+	doaminDatas, exists := ta.datas[domain]
+	if !exists {
 		data := &transactionData{
 			t:         transaction.GetType(),
 			name:      transaction.GetName(),
@@ -81,21 +84,42 @@ func (ta *TransactionAggregator) getOrDefault(transaction *message.Transaction) 
 			durations: make(map[int]int),
 		}
 
-		ta.transactions[key] = data
+		ta.datas[domain] = map[string]*transactionData{
+			key: data,
+		}
+	} else {
+		data, exists = doaminDatas[key]
+		if !exists {
+			data := &transactionData{
+				t:         transaction.GetType(),
+				name:      transaction.GetName(),
+				count:     0,
+				fail:      0,
+				sum:       0,
+				durations: make(map[int]int),
+			}
+
+			ta.datas[domain][key] = data
+		}
 	}
 
 	return data
 }
 
 func (ta *TransactionAggregator) flush() {
-	if len(ta.transactions) == 0 {
+	if len(ta.datas) == 0 {
 		return
 	}
 
-	t := message.NewTransaction(typeSystem, nameTransactionAggregator, message.SUCCESS, "", 0)
+	for domain, domainDatas := range ta.datas {
+		trans := message.NewTransaction(typeSystem, nameTransactionAggregator, message.SUCCESS, "", 0)
 
-	for _, data := range ta.transactions {
-		trans := message.NewTransaction(data.t, data.name, message.SUCCESS, data.encode(), 0)
-		t.AddChild(trans)
+		for _, data := range domainDatas {
+			trans := message.NewTransaction(data.t, data.name, message.SUCCESS, data.encode(), 0)
+			trans.AddChild(trans)
+		}
+
+		cat.Flush(domain, "todo", "todo", trans, "todo", "", "", "todo", "todo", "todo", false)
 	}
+
 }

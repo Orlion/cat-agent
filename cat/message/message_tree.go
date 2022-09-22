@@ -11,9 +11,10 @@ type MessageTree struct {
 	threadGroupName string
 	threadId        string
 	threadName      string
+	discard         bool
 }
 
-func NewMessageTree(domain, hostname, ipAddress string, message Message, messageId, parentMessageId, rootMessageId, threadGroupName, threadId, threadName string) *MessageTree {
+func NewMessageTree(domain, hostname, ipAddress string, message Message, messageId, parentMessageId, rootMessageId, threadGroupName, threadId, threadName string, discard bool) *MessageTree {
 	return &MessageTree{
 		domain:          domain,
 		hostname:        hostname,
@@ -25,6 +26,7 @@ func NewMessageTree(domain, hostname, ipAddress string, message Message, message
 		threadGroupName: threadGroupName,
 		threadId:        threadId,
 		threadName:      threadName,
+		discard:         discard,
 	}
 }
 
@@ -66,4 +68,8 @@ func (tree *MessageTree) GetThreadId() string {
 
 func (tree *MessageTree) GetThreadName() string {
 	return tree.threadName
+}
+
+func (tree *MessageTree) CanDiscard() bool {
+	return tree.discard
 }

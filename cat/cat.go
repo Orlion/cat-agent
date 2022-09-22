@@ -1,6 +1,8 @@
 package cat
 
-import "github.com/Orlion/cat-agent/cat/message"
+import (
+	"github.com/Orlion/cat-agent/cat/message"
+)
 
 var cat *Cat
 
@@ -14,14 +16,6 @@ func Init() {
 	}
 }
 
-func Flush(domain string, hostname string, ipAddress string, msg message.Message, messageId string, parentMessageId string, rootMessageId string, threadGroupName string, threadId string, threadName string) {
-	cat.manager.flush(domain, hostname, ipAddress, msg, messageId, parentMessageId, rootMessageId, threadGroupName, threadId, threadName)
-}
-
-func NewTransaction() *message.Transaction {
-	return message.NewTransaction()
-}
-
-func NewEvent() *message.Event {
-	return message.NewEvent()
+func Flush(domain string, hostname string, ipAddress string, msg message.Message, messageId string, parentMessageId string, rootMessageId string, threadGroupName string, threadId string, threadName string, discard bool) {
+	cat.manager.flush(domain, hostname, ipAddress, msg, messageId, parentMessageId, rootMessageId, threadGroupName, threadId, threadName, discard)
 }
