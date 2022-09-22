@@ -2,14 +2,15 @@ package message
 
 type Transaction struct {
 	baseMessage
-	children        []Message
-	durationInMicro int64
-	durationStart   int64
+	children            []Message
+	rawDurationInMicros int64
 }
 
-func NewTransaction(t, name, status, data string, timestampInMillis int) *Transaction {
+func NewTransaction(t, name, status, data string, timestampInMillis int64, children []Message, rawDurationInMicros int64) *Transaction {
 	return &Transaction{
-		baseMessage: newBaseMessage(t, name, status, data, timestampInMillis),
+		baseMessage:         newBaseMessage(t, name, status, data, timestampInMillis),
+		children:            children,
+		rawDurationInMicros: rawDurationInMicros,
 	}
 }
 
@@ -17,8 +18,8 @@ func (trans *Transaction) GetChildren() []Message {
 	return trans.children
 }
 
-func (trans *Transaction) GetDurationInMillis() int64 {
-	return trans.durationInMicro / 1000
+func (trans *Transaction) GetRawDurationInMicros() int64 {
+	return trans.rawDurationInMicros
 }
 
 func (trans *Transaction) AddChild(child Message) {

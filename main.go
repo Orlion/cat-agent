@@ -32,7 +32,11 @@ func main() {
 
 	log.Init(conf.Log)
 
-	cat.Init(conf.Cat)
+	err = cat.Init(conf.Cat)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "configuration file parse error: "+err.Error())
+		os.Exit(1)
+	}
 
 	srv := createServer(conf.Server)
 

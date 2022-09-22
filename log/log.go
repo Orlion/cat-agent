@@ -11,6 +11,8 @@ import (
 var logger *zap.SugaredLogger
 
 func Init(config *Config) {
+	config = withDefaultConf(config)
+
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
@@ -21,7 +23,7 @@ func Init(config *Config) {
 
 	if config.Filename != "" {
 		priority := zap.LevelEnablerFunc(func(lev zapcore.Level) bool {
-			return lev >= zapcore.Level(config.Level)
+			return lev >= config.Level
 		})
 		infoFileWriteSyncer := zapcore.AddSync(&lumberjack.Logger{
 			Filename:   config.Filename,
@@ -34,7 +36,7 @@ func Init(config *Config) {
 		cores = append(cores, infoFileCore)
 	}
 
-	logger = zap.New(zapcore.NewTee(cores...), zap.AddCaller()).Sugar()
+	logger = zap.New(zapcore.NewTee(cores...)).Sugar()
 }
 
 func Info(args ...interface{}) {
@@ -51,4 +53,8 @@ func Warnf(template string, args ...interface{}) {
 
 func Error(args ...interface{}) {
 	logger.Error(args)
+}
+
+func Errorf(template string, args ...interface{}) {
+	logger.Errorf(template, args)
 }

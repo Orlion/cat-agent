@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"io/ioutil"
 
 	"github.com/Orlion/cat-agent/cat"
@@ -10,12 +11,17 @@ import (
 )
 
 type Config struct {
-	Cat    *cat.Config
-	Server *server.Config
-	Log    *log.Config
+	Cat    *cat.Config    `yaml:"cat"`
+	Server *server.Config `yaml:"server"`
+	Log    *log.Config    `yaml:"log"`
 }
 
 func ParseConfig(filename string) (config *Config, err error) {
+	if filename == "" {
+		err = errors.New("please enter a configuration file name")
+		return
+	}
+
 	fileData, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return

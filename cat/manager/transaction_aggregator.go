@@ -22,7 +22,7 @@ func (td *transactionData) add(transaction *message.Transaction) {
 		td.fail++
 	}
 
-	millis := transaction.GetDurationInMillis()
+	millis := transaction.GetRawDurationInMicros() / 1000
 	td.sum += millis
 
 	duration := computeDuration(int(millis))
@@ -99,10 +99,10 @@ func (ta *TransactionAggregator) flush() {
 		return
 	}
 
-	trans := message.NewTransaction(typeSystem, nameTransactionAggregator, message.SUCCESS, "", 0)
+	trans := message.NewTransaction(typeSystem, nameTransactionAggregator, message.SUCCESS, "", 0, nil, 0)
 
 	for _, data := range ta.datas {
-		trans := message.NewTransaction(data.t, data.name, message.SUCCESS, data.encode(), 0)
+		trans := message.NewTransaction(data.t, data.name, message.SUCCESS, data.encode(), 0, nil, 0)
 		trans.AddChild(trans)
 	}
 

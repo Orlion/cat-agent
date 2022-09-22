@@ -7,7 +7,7 @@ type Message interface {
 	GetName() string
 	GetStatus() string
 	GetData() string
-	GetTimestamp() int
+	GetTimestamp() int64
 	IsSuccess() bool
 }
 
@@ -16,10 +16,10 @@ type baseMessage struct {
 	name              string
 	status            string
 	data              string
-	timestampInMillis int
+	timestampInMillis int64
 }
 
-func newBaseMessage(t, name, status, data string, timestampInMillis int) baseMessage {
+func newBaseMessage(t, name, status, data string, timestampInMillis int64) baseMessage {
 	return baseMessage{
 		t:                 t,
 		name:              name,
@@ -45,7 +45,7 @@ func (m *baseMessage) GetData() string {
 	return m.data
 }
 
-func (m *baseMessage) GetTimestamp() int {
+func (m *baseMessage) GetTimestamp() int64 {
 	return m.timestampInMillis
 }
 

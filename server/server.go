@@ -7,24 +7,17 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/Orlion/cat-agent/log"
+	"github.com/Orlion/cat-agent/pkg/atomicx"
 )
 
 var (
-	ErrServerClosed      = errors.New("server: Server closed")
-	shutdownPollInterval = 500 * time.Millisecond
+	ErrServerClosed = errors.New("server: Server closed")
 )
 
 type Handler func(req *Request) (status Status, payload []byte)
-
-type atomicBool int32
-
-func (b *atomicBool) isSet() bool { return atomic.LoadInt32((*int32)(b)) != 0 }
-func (b *atomicBool) setTrue()    { atomic.StoreInt32((*int32)(b), 1) }
-func (b *atomicBool) setFalse()   { atomic.StoreInt32((*int32)(b), 0) }
 
 type Server struct {
 	Addr         string
@@ -34,7 +27,7 @@ type Server struct {
 
 	handlers map[Cmd]Handler
 
-	inShutdown atomicBool
+	inShutdown atomicx.Bool
 
 	mu       sync.Mutex
 	listener net.Listener
@@ -42,11 +35,11 @@ type Server struct {
 }
 
 func NewServer(config *Config) *Server {
+	withDefaultConf(config)
 	return &Server{
 		Addr:         config.Addr,
 		ReadTimeout:  time.Duration(config.ReadTimeoutMillis) * time.Millisecond,
 		WriteTimeout: time.Duration(config.WriteTimeoutMillis) * time.Millisecond,
-		IdleTimeout:  time.Duration(config.IdleTimeoutMillis) * time.Millisecond,
 		handlers:     make(map[Cmd]Handler),
 	}
 }
@@ -75,6 +68,8 @@ func (srv *Server) serve(ln net.Listener) error {
 	log.Infof("server listen on %s...", srv.Addr)
 
 	var tempDelay time.Duration // how long to sleep on accept failure
+
+	srv.listener = ln
 
 	for {
 		rw, err := ln.Accept()
@@ -109,7 +104,7 @@ func (srv *Server) serve(ln net.Listener) error {
 }
 
 func (srv *Server) Shutdown() error {
-	srv.inShutdown.setTrue()
+	srv.inShutdown.SetTrue()
 
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
@@ -121,7 +116,7 @@ func (srv *Server) Shutdown() error {
 }
 
 func (srv *Server) shuttingDown() bool {
-	return srv.inShutdown.isSet()
+	return srv.inShutdown.Get()
 }
 
 func (s *Server) getDoneChan() <-chan struct{} {

@@ -2,27 +2,27 @@ package cat
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/Orlion/cat-agent/pkg/systemx"
 )
 
 type Config struct {
-	CatServerVersion string
-	Domain           string
-	Hostname         string
-	Env              string
-	Ip               string
-	IpHex            string
-	routerServers    []string
+	Domain        string   `yaml:"domain"`
+	Hostname      string   `yaml:"hostname"`
+	Env           string   `yaml:"env"`
+	Ip            string   `yaml:"ip"`
+	IpHex         string   `yaml:"ip_hex"`
+	RouterServers []string `yaml:"router-servers"`
 }
 
 func withDefaultConf(config *Config) error {
-	if len(config.CatServerVersion) < 1 {
-		config.CatServerVersion = defaultCatServerVersion
+	if config == nil {
+		return errors.New("cat config cannot be empty")
 	}
 
 	if config.Domain == "" {
-		return errors.New("domain cannot be empty.")
+		return errors.New("domain cannot be empty")
 	}
 
 	var err error
@@ -34,8 +34,9 @@ func withDefaultConf(config *Config) error {
 		config.Env = defaultEnv
 	}
 
-	if len(config.routerServers) < 1 {
-		return errors.New("router servers cannot be empty.")
+	fmt.Println(config)
+	if len(config.RouterServers) < 1 {
+		return errors.New("router servers cannot be empty")
 	}
 
 	return nil
