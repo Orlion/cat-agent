@@ -4,16 +4,16 @@ import (
 	"errors"
 	"io/ioutil"
 
-	"github.com/Orlion/cat-agent/cat"
+	catconfig "github.com/Orlion/cat-agent/cat/config"
 	"github.com/Orlion/cat-agent/log"
 	"github.com/Orlion/cat-agent/server"
 	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	Cat    *cat.Config    `yaml:"cat"`
-	Server *server.Config `yaml:"server"`
-	Log    *log.Config    `yaml:"log"`
+	Cat    *catconfig.Config `yaml:"cat"`
+	Server *server.Config    `yaml:"server"`
+	Log    *log.Config       `yaml:"log"`
 }
 
 func ParseConfig(filename string) (config *Config, err error) {

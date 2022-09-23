@@ -1,6 +1,7 @@
 package message
 
 type MessageTree struct {
+	domain          string
 	message         Message
 	messageId       string
 	parentMessageId string
@@ -11,17 +12,12 @@ type MessageTree struct {
 	discard         bool
 }
 
-func NewMessageTree(message Message, messageId, parentMessageId, rootMessageId, threadGroupName, threadId, threadName string, discard bool) *MessageTree {
-	return &MessageTree{
-		message:         message,
-		messageId:       messageId,
-		parentMessageId: parentMessageId,
-		rootMessageId:   rootMessageId,
-		threadGroupName: threadGroupName,
-		threadId:        threadId,
-		threadName:      threadName,
-		discard:         discard,
-	}
+func NewMessageTree() *MessageTree {
+	return &MessageTree{}
+}
+
+func (tree *MessageTree) GetDomain() string {
+	return tree.domain
 }
 
 func (tree *MessageTree) GetMessage() Message {
@@ -54,4 +50,40 @@ func (tree *MessageTree) GetThreadName() string {
 
 func (tree *MessageTree) CanDiscard() bool {
 	return tree.discard
+}
+
+func (tree *MessageTree) SetDomain(domain string) {
+	tree.domain = domain
+}
+
+func (tree *MessageTree) SetMessage(message Message) {
+	tree.message = message
+}
+
+func (tree *MessageTree) SetMessageId(messageId string) {
+	tree.messageId = messageId
+}
+
+func (tree *MessageTree) SetParentMessageId(parentMessageId string) {
+	tree.parentMessageId = parentMessageId
+}
+
+func (tree *MessageTree) SetRootMessageId(rootMessageId string) {
+	tree.rootMessageId = rootMessageId
+}
+
+func (tree *MessageTree) SetThreadGroupName(threadGroupName string) {
+	tree.threadGroupName = threadGroupName
+}
+
+func (tree *MessageTree) SetThreadId(threadId string) {
+	tree.threadId = threadId
+}
+
+func (tree *MessageTree) SetThreadName(threadName string) {
+	tree.threadName = threadName
+}
+
+func (tree *MessageTree) SetDiscard(discard bool) {
+	tree.discard = discard
 }

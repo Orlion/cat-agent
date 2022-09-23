@@ -1,4 +1,4 @@
-package cat
+package config
 
 import (
 	"errors"
@@ -7,6 +7,8 @@ import (
 	"github.com/Orlion/cat-agent/pkg/systemx"
 )
 
+var config *Config
+
 type Config struct {
 	Domain        string   `yaml:"domain"`
 	Hostname      string   `yaml:"hostname"`
@@ -14,6 +16,20 @@ type Config struct {
 	Ip            string   `yaml:"ip"`
 	IpHex         string   `yaml:"ip_hex"`
 	RouterServers []string `yaml:"router-servers"`
+}
+
+func GetDomain() string {
+	return config.Domain
+}
+
+func Init(conf *Config) error {
+	if err := withDefaultConf(conf); err != nil {
+		return err
+	}
+
+	config = conf
+
+	return nil
 }
 
 func withDefaultConf(config *Config) error {
@@ -27,11 +43,11 @@ func withDefaultConf(config *Config) error {
 
 	var err error
 	if config.Hostname, err = systemx.GetHostname(); err != nil {
-		config.Hostname = defaultHostname
+		config.Hostname = DefaultHostname
 	}
 
 	if config.Env == "" {
-		config.Env = defaultEnv
+		config.Env = DefaultEnv
 	}
 
 	fmt.Println(config)

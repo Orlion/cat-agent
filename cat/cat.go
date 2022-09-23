@@ -1,6 +1,7 @@
 package cat
 
 import (
+	"github.com/Orlion/cat-agent/cat/config"
 	"github.com/Orlion/cat-agent/cat/manager"
 	"github.com/Orlion/cat-agent/cat/message"
 )
@@ -11,8 +12,8 @@ type Cat struct {
 	manager *manager.Manager
 }
 
-func Init(config *Config) error {
-	if err := withDefaultConf(config); err != nil {
+func Init(conf *config.Config) error {
+	if err := config.Init(conf); err != nil {
 		return err
 	}
 	cat = &Cat{
@@ -22,6 +23,6 @@ func Init(config *Config) error {
 	return nil
 }
 
-func Flush(msg message.Message, messageId string, parentMessageId string, rootMessageId string, threadGroupName string, threadId string, threadName string, discard bool) {
-	cat.manager.Flush(msg, messageId, parentMessageId, rootMessageId, threadGroupName, threadId, threadName, discard)
+func Flush(tree *message.MessageTree) {
+	cat.manager.Flush(tree)
 }

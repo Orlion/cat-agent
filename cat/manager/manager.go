@@ -23,8 +23,7 @@ func NewManager() *Manager {
 	return manager
 }
 
-func (m *Manager) Flush(msg message.Message, messageId string, parentMessageId string, rootMessageId string, threadGroupName string, threadId string, threadName string, discard bool) {
-	tree := message.NewMessageTree(msg, messageId, parentMessageId, rootMessageId, threadGroupName, threadId, threadName, discard)
+func (m *Manager) Flush(tree *message.MessageTree) {
 	if tree.CanDiscard() && m.isHitSample() {
 		m.aggregator.aggregate(tree)
 	} else {

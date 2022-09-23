@@ -60,5 +60,15 @@ func (ea *EventAggregator) flush() {
 		trans.AddChild(event)
 	}
 
-	ea.manager.Flush(trans, "todo", "", "", ThreadGroupNameCatAgent, ThreadIdCatAgent, ThreadNameCatAgent, false)
+	tree := message.NewMessageTree()
+	tree.SetMessage(trans)
+	tree.SetMessageId("todo")
+	tree.SetParentMessageId("")
+	tree.SetRootMessageId("")
+	tree.SetThreadGroupName(ThreadGroupNameCatAgent)
+	tree.SetThreadId(ThreadIdCatAgent)
+	tree.SetThreadName(ThreadNameCatAgent)
+	tree.SetDiscard(false)
+
+	ea.manager.Flush(tree)
 }

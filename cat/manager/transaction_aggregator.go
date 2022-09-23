@@ -106,5 +106,15 @@ func (ta *TransactionAggregator) flush() {
 		trans.AddChild(trans)
 	}
 
-	ta.manager.Flush(trans, "todo", "", "", ThreadGroupNameCatAgent, ThreadIdCatAgent, ThreadNameCatAgent, false)
+	tree := message.NewMessageTree()
+	tree.SetMessage(trans)
+	tree.SetMessageId("todo")
+	tree.SetParentMessageId("")
+	tree.SetRootMessageId("")
+	tree.SetThreadGroupName(ThreadGroupNameCatAgent)
+	tree.SetThreadId(ThreadIdCatAgent)
+	tree.SetThreadName(ThreadNameCatAgent)
+	tree.SetDiscard(false)
+
+	ta.manager.Flush(tree)
 }

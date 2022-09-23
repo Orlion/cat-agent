@@ -10,6 +10,7 @@ type Status uint32
 const (
 	StatusOk Status = iota
 	StatusMsgReadHeaderErr
+	StatusMsgReadMessageErr
 )
 
 const RespHeaderLen = 8

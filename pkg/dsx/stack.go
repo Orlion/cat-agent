@@ -25,3 +25,10 @@ func (s *TransactionStack) Pop() *message.Transaction {
 func (s *TransactionStack) IsEmpty() bool {
 	return len(s.list) == 0
 }
+
+func (s *TransactionStack) Peek() *message.Transaction {
+	if s.IsEmpty() {
+		return nil
+	}
+	return s.list[len(s.list)-1]
+}

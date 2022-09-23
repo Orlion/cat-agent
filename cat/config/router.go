@@ -1,4 +1,4 @@
-package cat
+package config
 
 import (
 	"encoding/xml"
@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Orlion/cat-agent/log"
@@ -50,9 +51,7 @@ func (r *Router) updateRouterConfig() {
 	query.Add("domain", r.domain)
 	query.Add("ip", r.ip)
 	query.Add("hostname", r.hostname)
-	if r.catServerVersion == CatServerVersionV3 {
-		query.Add("op", "xml")
-	}
+	query.Add("op", "xml")
 
 	u := url.URL{
 		Scheme:   "http",
@@ -89,24 +88,21 @@ func (r *Router) parse(reader io.ReadCloser) {
 	if err != nil {
 		return
 	}
-	if r.catServerVersion == CatServerVersionV3 {
-		t := new(routerConfigXML)
-		if err := xml.Unmarshal(bytes, &t); err != nil {
-			log.Warnf("error occurred while parsing router config xml content.\n%s", string(bytes))
-		}
 
-		for _, property := range t.Properties {
-			switch property.Id {
-			case propertySample:
-				r.updateSample(property.Value)
-			case propertyRouters:
-				r.updateRouters(property.Value)
-			case propertyBlock:
-				r.updateBlock(property.Value)
-			}
+	t := new(routerConfigXML)
+	if err := xml.Unmarshal(bytes, &t); err != nil {
+		log.Warnf("error occurred while parsing router config xml content.\n%s", string(bytes))
+	}
+
+	for _, property := range t.Properties {
+		switch property.Id {
+		case propertySample:
+			r.updateSample(property.Value)
+		case propertyRouters:
+			r.updateRouters(property.Value)
+		case propertyBlock:
+			r.updateBlock(property.Value)
 		}
-	} else {
-		r.updateRouters(string(bytes))
 	}
 }
 
@@ -175,4 +171,20 @@ func (r *Router) shuffleRouterServers() {
 		index := rand.Intn(length - i)
 		r.routerServers[i], r.routerServers[index+i] = r.routerServers[index+i], r.routerServers[i]
 	}
+}
+
+func resolveServerAddresses(router string) (addresses []string) {
+	for _, segment := range strings.Split(router, ";") {
+		if len(segment) == 0 {
+			continue
+		}
+		fragments := strings.Split(segment, ":")
+		if len(fragments) != 2 {
+			continue
+		}
+
+		addresses = append(addresses, segment)
+	}
+
+	return
 }
