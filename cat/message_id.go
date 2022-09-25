@@ -6,15 +6,13 @@ import (
 	"time"
 )
 
-func GetNextId(domain string) string {
-	return messageIdFactory.getNextId(domain)
-}
-
-var messageIdFactory = new(MessageIdFactory)
-
 type MessageIdFactory struct {
 	index uint32
 	hour  int
+}
+
+func newMessageIdFactory() *MessageIdFactory {
+	return &MessageIdFactory{}
 }
 
 func (f *MessageIdFactory) getNextId(domain string) string {

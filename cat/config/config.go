@@ -3,23 +3,67 @@ package config
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/Orlion/cat-agent/pkg/systemx"
 )
 
-var config *Config
-
 type Config struct {
-	Domain        string   `yaml:"domain"`
-	Hostname      string   `yaml:"hostname"`
-	Env           string   `yaml:"env"`
-	Ip            string   `yaml:"ip"`
-	IpHex         string   `yaml:"ip_hex"`
-	RouterServers []string `yaml:"router-servers"`
+	Domain   string   `yaml:"domain"`
+	Hostname string   `yaml:"hostname"`
+	Env      string   `yaml:"env"`
+	Ip       string   `yaml:"ip"`
+	IpHex    string   `yaml:"ip_hex"`
+	Servers  []string `yaml:"servers"`
 }
 
-func GetDomain() string {
-	return config.Domain
+type ConfigService struct {
+	config      *Config
+	routers     []string
+	mu          sync.RWMutex
+	routersCond *sync.Cond
+}
+
+func (c *ConfigService) GetDomain() string {
+	return c.config.Domain
+}
+
+func (c *ConfigService) GetHostname() string {
+	return c.config.Hostname
+}
+
+func (c *ConfigService) GetEnv() string {
+	return c.config.Env
+}
+
+func (c *ConfigService) GetIp() string {
+	return c.config.Ip
+}
+
+func (c *ConfigService) GetIpHex() string {
+	return c.config.IpHex
+}
+
+func (c *ConfigService) GetServers() []string {
+	return c.config.Servers
+}
+
+func (c *ConfigService) GetRouters() []string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.routers
+}
+
+func (c *ConfigService) RoutersCondWait() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.routersCond.Wait()
+}
+
+var instance *ConfigService
+
+func GetInstance() *ConfigService {
+	return instance
 }
 
 func Init(conf *Config) error {
@@ -27,8 +71,9 @@ func Init(conf *Config) error {
 		return err
 	}
 
-	config = conf
-
+	instance = &ConfigService{}
+	instance.mu = sync.RWMutex{}
+	instance.routersCond = sync.NewCond(&instance.mu)
 	return nil
 }
 
@@ -51,8 +96,8 @@ func withDefaultConf(config *Config) error {
 	}
 
 	fmt.Println(config)
-	if len(config.RouterServers) < 1 {
-		return errors.New("router servers cannot be empty")
+	if len(config.Servers) < 1 {
+		return errors.New("servers cannot be empty")
 	}
 
 	return nil

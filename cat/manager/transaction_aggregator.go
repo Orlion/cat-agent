@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/Orlion/cat-agent/cat/config"
 	"github.com/Orlion/cat-agent/cat/message"
 )
 
@@ -36,13 +37,13 @@ func (td *transactionData) add(transaction *message.Transaction) {
 func (td *transactionData) encode() string {
 	buf := bytes.NewBuffer([]byte{})
 
-	buf.WriteRune(batchFlag)
+	buf.WriteRune(config.BatchFlag)
 	buf.WriteString(strconv.Itoa(td.count))
-	buf.WriteRune(batchSplit)
+	buf.WriteRune(config.BatchSplit)
 	buf.WriteString(strconv.Itoa(td.fail))
-	buf.WriteRune(batchSplit)
+	buf.WriteRune(config.BatchSplit)
 	buf.WriteString(strconv.FormatUint(uint64(td.sum), 10))
-	buf.WriteRune(batchSplit)
+	buf.WriteRune(config.BatchSplit)
 
 	i := 0
 	for k, v := range td.durations {
@@ -55,7 +56,7 @@ func (td *transactionData) encode() string {
 		i++
 	}
 
-	buf.WriteRune(batchSplit)
+	buf.WriteRune(config.BatchSplit)
 	return buf.String()
 }
 
@@ -99,7 +100,7 @@ func (ta *TransactionAggregator) flush() {
 		return
 	}
 
-	trans := message.NewTransaction(typeSystem, nameTransactionAggregator, message.SUCCESS, "", 0, nil, 0)
+	trans := message.NewTransaction(config.TypeSystem, config.NameTransactionAggregator, message.SUCCESS, "", 0, nil, 0)
 
 	for _, data := range ta.datas {
 		trans := message.NewTransaction(data.t, data.name, message.SUCCESS, data.encode(), 0, nil, 0)
@@ -111,9 +112,9 @@ func (ta *TransactionAggregator) flush() {
 	tree.SetMessageId("todo")
 	tree.SetParentMessageId("")
 	tree.SetRootMessageId("")
-	tree.SetThreadGroupName(ThreadGroupNameCatAgent)
-	tree.SetThreadId(ThreadIdCatAgent)
-	tree.SetThreadName(ThreadNameCatAgent)
+	tree.SetThreadGroupName(config.ThreadGroupNameCatAgent)
+	tree.SetThreadId(config.ThreadIdCatAgent)
+	tree.SetThreadName(config.ThreadNameCatAgent)
 	tree.SetDiscard(false)
 
 	ta.manager.Flush(tree)

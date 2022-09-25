@@ -3,6 +3,7 @@ package manager
 import (
 	"fmt"
 
+	"github.com/Orlion/cat-agent/cat/config"
 	"github.com/Orlion/cat-agent/cat/message"
 )
 
@@ -54,9 +55,9 @@ func (ea *EventAggregator) flush() {
 		return
 	}
 
-	trans := message.NewTransaction(typeSystem, nameEventAggregator, message.SUCCESS, "", 0, nil, 0)
+	trans := message.NewTransaction(config.TypeSystem, config.NameEventAggregator, message.SUCCESS, "", 0, nil, 0)
 	for _, data := range ea.datas {
-		event := message.NewEvent(data.t, data.name, message.SUCCESS, fmt.Sprintf("%c%d%c%d", batchFlag, data.count, batchSplit, data.fail), 0)
+		event := message.NewEvent(data.t, data.name, message.SUCCESS, fmt.Sprintf("%c%d%c%d", config.BatchFlag, data.count, config.BatchSplit, data.fail), 0)
 		trans.AddChild(event)
 	}
 
@@ -65,9 +66,9 @@ func (ea *EventAggregator) flush() {
 	tree.SetMessageId("todo")
 	tree.SetParentMessageId("")
 	tree.SetRootMessageId("")
-	tree.SetThreadGroupName(ThreadGroupNameCatAgent)
-	tree.SetThreadId(ThreadIdCatAgent)
-	tree.SetThreadName(ThreadNameCatAgent)
+	tree.SetThreadGroupName(config.ThreadGroupNameCatAgent)
+	tree.SetThreadId(config.ThreadIdCatAgent)
+	tree.SetThreadName(config.ThreadNameCatAgent)
 	tree.SetDiscard(false)
 
 	ea.manager.Flush(tree)
