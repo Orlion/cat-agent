@@ -2,18 +2,16 @@ package config
 
 import (
 	"encoding/xml"
+	"errors"
 	"io"
 	"io/ioutil"
-	"math"
 	"math/rand"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Orlion/cat-agent/log"
-	"github.com/Orlion/cat-agent/pkg/atomicx"
 )
 
 const ( // Declared properties given by the router server.
@@ -33,24 +31,12 @@ type routerConfigXML struct {
 	Properties []routerConfigXMLProperty `xml:"property"`
 }
 
-type Router struct {
-	catServerVersion string
-	env              string
-	domain           string
-	ip               string
-	hostname         string
-	routerServers    []string
-	routers          []string
-	current          string
-	sample           float64
-}
-
-func (r *Router) updateRouterConfig() {
+func (c *ConfigService) pollRouters() error {
 	var query = url.Values{}
-	query.Add("env", r.env)
-	query.Add("domain", r.domain)
-	query.Add("ip", r.ip)
-	query.Add("hostname", r.hostname)
+	query.Add("env", c.config.Env)
+	query.Add("domain", c.config.Domain)
+	query.Add("ip", c.config.Ip)
+	query.Add("hostname", c.config.Hostname)
 	query.Add("op", "xml")
 
 	u := url.URL{
@@ -63,9 +49,9 @@ func (r *Router) updateRouterConfig() {
 		Timeout: 5 * time.Second,
 	}
 
-	r.shuffleRouterServers()
+	c.shuffleRouterServers()
 
-	for _, server := range r.routerServers {
+	for _, server := range c.config.Servers {
 		u.Host = server
 		log.Infof("getting router config from %s", u.String())
 
@@ -75,15 +61,14 @@ func (r *Router) updateRouterConfig() {
 			continue
 		}
 
-		r.parse(resp.Body)
-		return
+		c.parseRouterConfig(resp.Body)
+		return nil
 	}
 
-	log.Error("can't get router config from remote server.")
-	return
+	return errors.New("can't get router config from remote server")
 }
 
-func (r *Router) parse(reader io.ReadCloser) {
+func (c *ConfigService) parseRouterConfig(reader io.ReadCloser) {
 	bytes, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return
@@ -97,79 +82,21 @@ func (r *Router) parse(reader io.ReadCloser) {
 	for _, property := range t.Properties {
 		switch property.Id {
 		case propertySample:
-			r.updateSample(property.Value)
+			c.updateSample(property.Value)
 		case propertyRouters:
-			r.updateRouters(property.Value)
+			c.updateRouters(property.Value)
 		case propertyBlock:
-			r.updateBlock(property.Value)
+			c.updateBlock(property.Value)
 		}
 	}
 }
 
-func (r *Router) updateSample(v string) {
-	sample, err := strconv.ParseFloat(v, 32)
-	if err != nil {
-		log.Warnf("Sample should be a valid float, %s given", v)
-	} else if math.Abs(sample-atomicx.LoadFloat64(&r.sample)) > 1e-9 {
-		atomicx.StoreFloat64(&r.sample, sample)
-		log.Infof("Sample rate has been set to %f%%", atomicx.LoadFloat64(&r.sample)*100)
-	}
-}
-
-func (r *Router) updateRouters(router string) {
-	newRouters := resolveServerAddresses(router)
-
-	oldLen, newLen := len(r.routers), len(newRouters)
-
-	if newLen == 0 {
-		return
-	} else if oldLen == 0 {
-		log.Infof("routers has been initialized to: %s", newRouters)
-		r.routers = newRouters
-	} else if oldLen != newLen {
-		log.Infof("routers has been changed to: %s", newRouters)
-		r.routers = newRouters
-	} else {
-		for i := 0; i < oldLen; i++ {
-			if r.routers[i] != newRouters[i] {
-				log.Infof("routers has been changed to: %s", newRouters)
-				r.routers = newRouters
-				break
-			}
-		}
-	}
-
-	if len(newRouters) > 0 {
-		rand.Seed(time.Now().UnixNano())
-		randNum := rand.Intn(len(newRouters))
-		server := newRouters[randNum]
-
-		if r.current == server {
-			return
-		}
-
-		r.current = server
-		log.Infof("Connected to %s.", server)
-		return
-	}
-
-	log.Info("cannot established a connection to cat server.")
-}
-
-func (r *Router) updateBlock(v string) {
-	if v == "false" {
-		// enable()
-	} else {
-		// disable()
-	}
-}
-
-func (r *Router) shuffleRouterServers() {
+func (c *ConfigService) shuffleRouterServers() {
 	rand.Seed(time.Now().UnixNano())
-	length := len(r.routerServers)
+	length := len(c.config.Servers)
 	for i := 0; i < length; i++ {
 		index := rand.Intn(length - i)
-		r.routerServers[i], r.routerServers[index+i] = r.routerServers[index+i], r.routerServers[i]
+		c.config.Servers[i], c.config.Servers[index+i] = c.config.Servers[index+i], c.config.Servers[i]
 	}
 }
 

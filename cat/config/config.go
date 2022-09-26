@@ -3,8 +3,14 @@ package config
 import (
 	"errors"
 	"fmt"
+	"math"
+	"strconv"
 	"sync"
+	"sync/atomic"
+	"time"
 
+	"github.com/Orlion/cat-agent/log"
+	"github.com/Orlion/cat-agent/pkg/atomicx"
 	"github.com/Orlion/cat-agent/pkg/systemx"
 )
 
@@ -18,18 +24,44 @@ type Config struct {
 }
 
 type ConfigService struct {
+	mu          sync.RWMutex
 	config      *Config
 	routers     []string
-	mu          sync.RWMutex
 	routersCond *sync.Cond
+	sample      float64
+	done        chan struct{}
+	wg          *sync.WaitGroup
+	enable      uint32
 }
 
-func (c *ConfigService) run() {
+func (c *ConfigService) run() error {
+	ticker := time.NewTicker(time.Minute * 1)
+	if err := c.pollRouters(); err != nil {
+		return err
+	}
 
+	c.wg.Add(1)
+	go func() {
+	Loop:
+		for {
+			select {
+			case <-ticker.C:
+				if err := c.pollRouters(); err != nil {
+					log.Error(err.Error())
+				}
+			case <-c.done:
+				break Loop
+			}
+		}
+		c.wg.Done()
+	}()
+
+	return nil
 }
 
 func (c *ConfigService) shutdown() {
-
+	close(c.done)
+	c.wg.Wait()
 }
 
 func (c *ConfigService) GetDomain() string {
@@ -60,6 +92,60 @@ func (c *ConfigService) GetRouters() []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.routers
+}
+
+func (c *ConfigService) updateSample(v string) {
+	sample, err := strconv.ParseFloat(v, 32)
+	if err != nil {
+		log.Warnf("Sample should be a valid float, %s given", v)
+	} else if math.Abs(sample-atomicx.LoadFloat64(&c.sample)) > 1e-9 {
+		atomicx.StoreFloat64(&c.sample, sample)
+		log.Infof("Sample rate has been set to %f%%", atomicx.LoadFloat64(&c.sample)*100)
+	}
+}
+
+func (c *ConfigService) updateRouters(router string) {
+	newRouters := resolveServerAddresses(router)
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	oldLen, newLen := len(c.routers), len(newRouters)
+
+	if newLen == 0 {
+		return
+	} else if oldLen == 0 {
+		log.Infof("routers has been initialized to: %s", newRouters)
+		c.routers = newRouters
+	} else if oldLen != newLen {
+		log.Infof("routers has been changed to: %s", newRouters)
+		c.routers = newRouters
+	} else {
+		for i := 0; i < oldLen; i++ {
+			if c.routers[i] != newRouters[i] {
+				log.Infof("routers has been changed to: %s", newRouters)
+				c.routers = newRouters
+				break
+			}
+		}
+	}
+
+	log.Info("cannot established a connection to cat server.")
+}
+
+func (c *ConfigService) updateBlock(v string) {
+	if v == "false" {
+		if atomic.SwapUint32(&c.enable, 1) == 0 {
+			log.Info("Cat has been enabled.")
+		}
+	} else {
+		if atomic.SwapUint32(&c.enable, 0) == 0 {
+			log.Info("Cat has been enabled.")
+		}
+	}
+}
+
+func (c *ConfigService) IsEnabled() bool {
+	return atomic.LoadUint32(&c.enable) == 1
 }
 
 func (c *ConfigService) RoutersCondWait() {

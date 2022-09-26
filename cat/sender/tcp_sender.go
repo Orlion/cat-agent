@@ -13,9 +13,12 @@ import (
 )
 
 type TcpSender struct {
-	normal chan *message.MessageTree
-	high   chan *message.MessageTree
-	config *config.ConfigService
+	normal  chan *message.MessageTree
+	high    chan *message.MessageTree
+	config  *config.ConfigService
+	running bool
+	wg      *sync.WaitGroup
+	cancel  func()
 }
 
 func NewTcpSender() *TcpSender {
@@ -23,40 +26,45 @@ func NewTcpSender() *TcpSender {
 		normal: make(chan *message.MessageTree, config.NormalPriorityQueueSize),
 		high:   make(chan *message.MessageTree, config.HighPriorityQueueSize),
 		config: config.GetInstance(),
+		wg:     new(sync.WaitGroup),
 	}
 }
 
 func (s *TcpSender) Run() {
-	var (
-		wg = new(sync.WaitGroup)
-	)
+	var ctx context.Context
 
-	for {
-		ctx, cancel := context.WithCancel(context.Background())
-		for _, router := range s.config.GetRouters() {
-			for i := 0; i < config.QueueConsumerNum; i++ {
-				wg.Add(1)
-				go func() {
-					s.consume(ctx, router, i, s.normal)
-					wg.Done()
-				}()
-			}
+	ctx, s.cancel = context.WithCancel(context.Background())
+	for _, router := range s.config.GetRouters() {
+		for i := 0; i < config.QueueConsumerNum; i++ {
+			s.wg.Add(1)
+			go func(id int) {
+				s.consume(ctx, router, id, s.normal)
+				s.wg.Done()
+			}(i)
 		}
+	}
 
-		// wait for routers change
-		s.config.RoutersCondWait()
-		// if routers changed cancel consume
-		cancel()
-		// wait all the consumer stop
-		wg.Wait()
+	if !s.running {
+		s.running = true
+		go func() {
+			// listen routers change
+			s.config.RoutersCondWait()
+			s.restart()
+		}()
 	}
 }
 
-func (s *TcpSender) Shutdown() {
-
+func (s *TcpSender) restart() {
+	s.Shutdown()
+	s.Run()
 }
 
-func (s *TcpSender) consume(ctx context.Context, server string, i int, ch chan *message.MessageTree) error {
+func (s *TcpSender) Shutdown() {
+	s.cancel()
+	s.wg.Wait()
+}
+
+func (s *TcpSender) consume(ctx context.Context, server string, id int, ch chan *message.MessageTree) error {
 	conn, err := net.DialTimeout("tcp", server, time.Second)
 	if err != nil {
 		return err
@@ -66,7 +74,7 @@ func (s *TcpSender) consume(ctx context.Context, server string, i int, ch chan *
 
 	buf := make([]*message.MessageTree, config.QueueConsumerBufSize)
 
-	log.Infof("tcp sender consumer: %d running...", i)
+	log.Infof("tcp sender consumer: %d running...", id)
 
 Loop:
 	for {
