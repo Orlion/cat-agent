@@ -1,4 +1,4 @@
-package manager
+package cat
 
 import "github.com/Orlion/cat-agent/cat/message"
 
@@ -7,10 +7,10 @@ type LocalAggregator struct {
 	ea *EventAggregator
 }
 
-func newLocalAggregator(manager *Manager) *LocalAggregator {
+func newLocalAggregator() *LocalAggregator {
 	return &LocalAggregator{
-		ta: newTransactionAggregator(manager),
-		ea: newEventAggregator(manager),
+		ta: newTransactionAggregator(),
+		ea: newEventAggregator(),
 	}
 }
 

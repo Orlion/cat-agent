@@ -1,4 +1,4 @@
-package manager
+package cat
 
 import (
 	"sync/atomic"
@@ -13,17 +13,25 @@ type Manager struct {
 	sampleCount uint64
 }
 
-func NewManager() *Manager {
+func newManager() *Manager {
 	manager := &Manager{
 		sender: sender.NewTcpSender(),
 	}
 
-	manager.aggregator = newLocalAggregator(manager)
+	manager.aggregator = newLocalAggregator()
 
 	return manager
 }
 
-func (m *Manager) Flush(tree *message.MessageTree) {
+func (m *Manager) run() {
+	m.sender.Run()
+}
+
+func (m *Manager) shutdown() {
+	m.sender.Shutdown()
+}
+
+func (m *Manager) flush(tree *message.MessageTree) {
 	if tree.CanDiscard() && m.isHitSample() {
 		m.aggregator.aggregate(tree)
 	} else {

@@ -52,6 +52,10 @@ func (s *TcpSender) Run() {
 	}
 }
 
+func (s *TcpSender) Shutdown() {
+
+}
+
 func (s *TcpSender) consume(ctx context.Context, server string, i int, ch chan *message.MessageTree) error {
 	conn, err := net.DialTimeout("tcp", server, time.Second)
 	if err != nil {

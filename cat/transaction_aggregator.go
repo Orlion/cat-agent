@@ -1,4 +1,4 @@
-package manager
+package cat
 
 import (
 	"bytes"
@@ -61,14 +61,11 @@ func (td *transactionData) encode() string {
 }
 
 type TransactionAggregator struct {
-	manager *Manager
-	datas   map[string]*transactionData
+	datas map[string]*transactionData
 }
 
-func newTransactionAggregator(manager *Manager) *TransactionAggregator {
-	return &TransactionAggregator{
-		manager: manager,
-	}
+func newTransactionAggregator() *TransactionAggregator {
+	return &TransactionAggregator{}
 }
 
 func (ta *TransactionAggregator) logTransaction(transaction *message.Transaction) {
@@ -109,13 +106,12 @@ func (ta *TransactionAggregator) flush() {
 
 	tree := message.NewMessageTree()
 	tree.SetMessage(trans)
-	tree.SetMessageId("todo")
+	tree.SetMessageId(getNextId())
 	tree.SetParentMessageId("")
 	tree.SetRootMessageId("")
 	tree.SetThreadGroupName(config.ThreadGroupNameCatAgent)
 	tree.SetThreadId(config.ThreadIdCatAgent)
 	tree.SetThreadName(config.ThreadNameCatAgent)
 	tree.SetDiscard(false)
-
-	ta.manager.Flush(tree)
+	Flush(tree)
 }

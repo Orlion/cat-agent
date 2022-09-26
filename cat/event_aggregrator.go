@@ -1,4 +1,4 @@
-package manager
+package cat
 
 import (
 	"fmt"
@@ -20,14 +20,11 @@ func (ed *eventData) add(event *message.Event) {
 }
 
 type EventAggregator struct {
-	manager *Manager
-	datas   map[string]*eventData
+	datas map[string]*eventData
 }
 
-func newEventAggregator(manager *Manager) *EventAggregator {
-	return &EventAggregator{
-		manager: manager,
-	}
+func newEventAggregator() *EventAggregator {
+	return &EventAggregator{}
 }
 
 func (ea *EventAggregator) logEvent(event *message.Event) {
@@ -63,7 +60,7 @@ func (ea *EventAggregator) flush() {
 
 	tree := message.NewMessageTree()
 	tree.SetMessage(trans)
-	tree.SetMessageId("todo")
+	tree.SetMessageId(getNextId())
 	tree.SetParentMessageId("")
 	tree.SetRootMessageId("")
 	tree.SetThreadGroupName(config.ThreadGroupNameCatAgent)
@@ -71,5 +68,5 @@ func (ea *EventAggregator) flush() {
 	tree.SetThreadName(config.ThreadNameCatAgent)
 	tree.SetDiscard(false)
 
-	ea.manager.Flush(tree)
+	Flush(tree)
 }

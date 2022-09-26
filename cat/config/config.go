@@ -24,6 +24,14 @@ type ConfigService struct {
 	routersCond *sync.Cond
 }
 
+func (c *ConfigService) run() {
+
+}
+
+func (c *ConfigService) shutdown() {
+
+}
+
 func (c *ConfigService) GetDomain() string {
 	return c.config.Domain
 }
@@ -74,7 +82,13 @@ func Init(conf *Config) error {
 	instance = &ConfigService{}
 	instance.mu = sync.RWMutex{}
 	instance.routersCond = sync.NewCond(&instance.mu)
+
+	instance.run()
 	return nil
+}
+
+func Shutdown() {
+	instance.shutdown()
 }
 
 func withDefaultConf(config *Config) error {
