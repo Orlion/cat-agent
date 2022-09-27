@@ -75,7 +75,7 @@ func newTransactionAggregator() *TransactionAggregator {
 
 func (ta *TransactionAggregator) run() {
 	go func() {
-		ticker := time.NewTicker(config.TransactionAggregatorInterval)
+		ticker := time.NewTicker(config.TransactionAggregatorTickerDuration)
 
 		for !ta.inShutdown.Get() {
 			select {
@@ -155,5 +155,5 @@ func (ta *TransactionAggregator) flush() {
 	tree.SetThreadId(config.ThreadIdCatAgent)
 	tree.SetThreadName(config.ThreadNameCatAgent)
 	tree.SetDiscard(false)
-	Flush(tree)
+	catInstance.manager.flush(tree)
 }

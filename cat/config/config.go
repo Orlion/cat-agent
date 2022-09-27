@@ -2,7 +2,6 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"strconv"
 	"sync"
@@ -32,6 +31,20 @@ type ConfigService struct {
 	done        chan struct{}
 	wg          *sync.WaitGroup
 	enable      uint32
+}
+
+func newConfigService(config *Config) (*ConfigService, error) {
+	if err := withDefaultConf(config); err != nil {
+		return nil, err
+	}
+
+	c := &ConfigService{
+		config: config,
+	}
+	c.mu = sync.RWMutex{}
+	c.routersCond = sync.NewCond(&c.mu)
+
+	return c, nil
 }
 
 func (c *ConfigService) run() error {
@@ -161,21 +174,22 @@ func (c *ConfigService) RoutersCondWait() {
 
 var instance *ConfigService
 
-func GetInstance() *ConfigService {
-	return instance
-}
-
-func Init(conf *Config) error {
-	if err := withDefaultConf(conf); err != nil {
-		return err
+func Init(config *Config) (err error) {
+	instance, err = newConfigService(config)
+	if err != nil {
+		return
 	}
 
-	instance = &ConfigService{}
-	instance.mu = sync.RWMutex{}
-	instance.routersCond = sync.NewCond(&instance.mu)
+	err = instance.run()
+	if err != nil {
+		return
+	}
 
-	instance.run()
-	return nil
+	return
+}
+
+func GetInstance() *ConfigService {
+	return instance
 }
 
 func Shutdown() {
@@ -200,7 +214,6 @@ func withDefaultConf(config *Config) error {
 		config.Env = DefaultEnv
 	}
 
-	fmt.Println(config)
 	if len(config.Servers) < 1 {
 		return errors.New("servers cannot be empty")
 	}

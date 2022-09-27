@@ -57,7 +57,7 @@ func (c *ConfigService) pullRouters() error {
 
 		resp, err := client.Get(u.String())
 		if err != nil {
-			log.Warnf("Error occurred while getting router config from url %s", u.String())
+			log.Warnf("Error occurred while getting router config from url %s : %s", u.String(), err.Error())
 			continue
 		}
 

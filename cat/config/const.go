@@ -25,10 +25,11 @@ const (
 	HighPriorityQueueSize   = 50000
 	NormalPriorityQueueSize = 50000
 
-	QueueConsumerNum           = 10
-	QueueConsumerTimerDuration = 100 * time.Millisecond
-	QueueConsumerBufSize       = 150
+	NormalQueueConsumerNum      = 10
+	HighQueueConsumerNum        = 10
+	QueueConsumerTickerDuration = 100 * time.Millisecond
+	QueueConsumerBufSize        = 150
 
-	EventAggregatorInterval       = time.Second * 3
-	TransactionAggregatorInterval = time.Second * 3
+	EventAggregatorTickerDuration       = time.Second * 3
+	TransactionAggregatorTickerDuration = time.Second * 3
 )

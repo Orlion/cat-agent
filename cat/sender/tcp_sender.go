@@ -1,7 +1,6 @@
 package sender
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"sync"
@@ -10,15 +9,16 @@ import (
 	"github.com/Orlion/cat-agent/cat/config"
 	"github.com/Orlion/cat-agent/cat/message"
 	"github.com/Orlion/cat-agent/log"
+	"github.com/Orlion/cat-agent/pkg/atomicx"
 )
 
 type TcpSender struct {
-	normal  chan *message.MessageTree
-	high    chan *message.MessageTree
-	config  *config.ConfigService
-	running bool
-	wg      *sync.WaitGroup
-	cancel  func()
+	normal     chan *message.MessageTree
+	high       chan *message.MessageTree
+	config     *config.ConfigService
+	wg         *sync.WaitGroup
+	inShutdown atomicx.Bool
+	running    bool
 }
 
 func NewTcpSender() *TcpSender {
@@ -31,14 +31,19 @@ func NewTcpSender() *TcpSender {
 }
 
 func (s *TcpSender) Run() {
-	var ctx context.Context
-
-	ctx, s.cancel = context.WithCancel(context.Background())
 	for _, router := range s.config.GetRouters() {
-		for i := 0; i < config.QueueConsumerNum; i++ {
+		for i := 0; i < config.NormalQueueConsumerNum; i++ {
 			s.wg.Add(1)
 			go func(id int) {
-				s.consume(ctx, router, id, s.normal)
+				s.consume(router, id, s.normal)
+				s.wg.Done()
+			}(i)
+		}
+
+		for i := 0; i < config.HighQueueConsumerNum; i++ {
+			s.wg.Add(1)
+			go func(id int) {
+				s.consume(router, id, s.high)
 				s.wg.Done()
 			}(i)
 		}
@@ -47,68 +52,111 @@ func (s *TcpSender) Run() {
 	if !s.running {
 		s.running = true
 		go func() {
-			// listen routers change
-			s.config.RoutersCondWait()
-			s.restart()
+			for {
+				// listen routers change
+				s.config.RoutersCondWait()
+				s.restart()
+			}
 		}()
 	}
 }
 
 func (s *TcpSender) restart() {
-	s.Shutdown()
+	s.inShutdown.SetTrue()
+	s.wg.Wait()
 	s.Run()
 }
 
 func (s *TcpSender) Shutdown() {
-	s.cancel()
+	s.inShutdown.SetTrue()
+
+	close(s.normal)
+	close(s.high)
+
+	conn, err := net.DialTimeout("tcp", config.GetInstance().GetRouters()[0], time.Second)
+	if err == nil {
+		buf := make([]*message.MessageTree, config.QueueConsumerBufSize)
+
+		for msg := range s.high {
+			buf = append(buf, msg)
+			if len(buf) == config.QueueConsumerBufSize {
+				s.flush(conn, buf)
+			}
+		}
+
+		for msg := range s.normal {
+			buf = append(buf, msg)
+			if len(buf) == config.QueueConsumerBufSize {
+				s.flush(conn, buf)
+			}
+		}
+
+		s.flush(conn, buf)
+
+		conn.Close()
+	}
+
 	s.wg.Wait()
 }
 
-func (s *TcpSender) consume(ctx context.Context, server string, id int, ch chan *message.MessageTree) error {
+func (s *TcpSender) consume(server string, id int, ch chan *message.MessageTree) error {
 	conn, err := net.DialTimeout("tcp", server, time.Second)
 	if err != nil {
-		return err
+		log.Errorf("consumer try dial to %s error: %s", server, err.Error())
 	}
 
-	timer := time.NewTimer(config.QueueConsumerTimerDuration)
+	ticker := time.NewTicker(config.QueueConsumerTickerDuration)
 
 	buf := make([]*message.MessageTree, config.QueueConsumerBufSize)
 
 	log.Infof("tcp sender consumer: %d running...", id)
 
-Loop:
-	for {
+	for !s.inShutdown.Get() {
 		select {
 		case msg := <-ch:
 			buf = append(buf, msg)
 			if len(buf) == config.QueueConsumerBufSize {
-				s.flush(conn, buf)
+				if conn == nil {
+					conn, err = net.DialTimeout("tcp", server, time.Second)
+					if err != nil {
+						log.Errorf("consumer retry dial to %s error: %s", server, err.Error())
+					}
+				}
+				err = s.flush(conn, buf)
+				if err != nil {
+					log.Errorf("consumer flush %s error: %s", server, err.Error())
+				}
 				buf = buf[:0]
 			}
-		case <-timer.C:
-			if len(buf) > 0 {
-				s.flush(conn, buf)
-				buf = buf[:0]
-			}
-		case <-ctx.Done():
-			if len(buf) > 0 {
-				s.flush(conn, buf)
-			}
-			break Loop
+		case <-ticker.C:
+			s.flush(conn, buf)
+			buf = buf[:0]
 		}
 	}
+
+	s.flush(conn, buf)
+	buf = nil
+
+	conn.Close()
+
+	ticker.Stop()
 
 	return nil
 }
 
-func (s *TcpSender) flush(conn net.Conn, buf []*message.MessageTree) {
-	conn.SetWriteDeadline(time.Now().Add(time.Second))
+func (s *TcpSender) flush(conn net.Conn, buf []*message.MessageTree) error {
+	// conn.SetWriteDeadline(time.Now().Add(time.Second))
 	// todo
 	fmt.Println(buf)
-	conn.Write(nil)
+	// conn.Write(nil)
+	return nil
 }
 
 func (s *TcpSender) Offer(tree *message.MessageTree) {
+	if s.inShutdown.Get() {
+		return
+	}
+
 	if tree.GetMessage().IsSuccess() {
 		select {
 		case s.normal <- tree:

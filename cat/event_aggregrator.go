@@ -34,7 +34,7 @@ func newEventAggregator() *EventAggregator {
 
 func (ea *EventAggregator) run() {
 	go func() {
-		ticker := time.NewTicker(config.EventAggregatorInterval)
+		ticker := time.NewTicker(config.EventAggregatorTickerDuration)
 
 		for !ea.inShutdown.Get() {
 			select {
@@ -110,5 +110,5 @@ func (ea *EventAggregator) flush() {
 	tree.SetThreadName(config.ThreadNameCatAgent)
 	tree.SetDiscard(false)
 
-	Flush(tree)
+	catInstance.manager.flush(tree)
 }
