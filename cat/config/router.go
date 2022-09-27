@@ -31,7 +31,7 @@ type routerConfigXML struct {
 	Properties []routerConfigXMLProperty `xml:"property"`
 }
 
-func (c *ConfigService) pollRouters() error {
+func (c *ConfigService) pullRouters() error {
 	var query = url.Values{}
 	query.Add("env", c.config.Env)
 	query.Add("domain", c.config.Domain)

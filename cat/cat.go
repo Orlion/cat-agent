@@ -7,9 +7,10 @@ import (
 	"github.com/Orlion/cat-agent/cat/message"
 )
 
-var cat *Cat
+var catInstance *Cat
 
 type Cat struct {
+	inShutdown   bool
 	manager      *Manager
 	msgIdFactory *MessageIdFactory
 }
@@ -19,8 +20,25 @@ func (cat *Cat) run() {
 }
 
 func (cat *Cat) shutdown() {
+	cat.inShutdown = true
 	config.Shutdown()
 	cat.manager.shutdown()
+}
+
+func (cat *Cat) shuttingDown() bool {
+	return cat.inShutdown
+}
+
+func (cat *Cat) flush(tree *message.MessageTree) {
+	if cat.shuttingDown() {
+		return
+	}
+
+	cat.manager.flush(tree)
+}
+
+func (cat *Cat) getNextId() string {
+	return cat.msgIdFactory.getNextId()
 }
 
 func Init(conf *config.Config) error {
@@ -28,16 +46,18 @@ func Init(conf *config.Config) error {
 		return err
 	}
 
-	cat = &Cat{
+	catInstance = &Cat{
 		manager:      newManager(),
 		msgIdFactory: newMessageIdFactory(),
 	}
+
+	catInstance.run()
 
 	return nil
 }
 
 func Flush(tree *message.MessageTree) {
-	cat.manager.flush(tree)
+	catInstance.flush(tree)
 }
 
 func GetNextId(domain string) (string, error) {
@@ -50,9 +70,9 @@ func GetNextId(domain string) (string, error) {
 }
 
 func getNextId() string {
-	return cat.msgIdFactory.getNextId()
+	return catInstance.getNextId()
 }
 
 func Shutdown() {
-	cat.shutdown()
+	catInstance.shutdown()
 }

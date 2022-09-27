@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/Orlion/cat-agent/cat/config"
 	"github.com/Orlion/cat-agent/cat/message"
+	"github.com/Orlion/cat-agent/log"
+	"github.com/Orlion/cat-agent/pkg/atomicx"
 )
 
 type transactionData struct {
@@ -61,15 +64,54 @@ func (td *transactionData) encode() string {
 }
 
 type TransactionAggregator struct {
-	datas map[string]*transactionData
+	datas      map[string]*transactionData
+	ch         chan *message.Transaction
+	inShutdown atomicx.Bool
 }
 
 func newTransactionAggregator() *TransactionAggregator {
 	return &TransactionAggregator{}
 }
 
+func (ta *TransactionAggregator) run() {
+	go func() {
+		ticker := time.NewTicker(config.TransactionAggregatorInterval)
+
+		for !ta.inShutdown.Get() {
+			select {
+			case transaction := <-ta.ch:
+				ta.getOrDefault(transaction).add(transaction)
+			case <-ticker.C:
+				ta.flush()
+			}
+		}
+
+		ticker.Stop()
+	}()
+}
+
+func (ta *TransactionAggregator) shutdown() {
+	ta.inShutdown.SetTrue()
+
+	close(ta.ch)
+
+	for transaction := range ta.ch {
+		ta.getOrDefault(transaction).add(transaction)
+	}
+
+	ta.flush()
+}
+
 func (ta *TransactionAggregator) logTransaction(transaction *message.Transaction) {
-	ta.getOrDefault(transaction).add(transaction)
+	if ta.inShutdown.Get() {
+		return
+	}
+
+	select {
+	case ta.ch <- transaction:
+	default:
+		log.Warnf("transaction aggregatro's ch is full, transaction: %s,%s has been discarded", transaction.GetType(), transaction.GetName())
+	}
 }
 
 func (ta *TransactionAggregator) getOrDefault(transaction *message.Transaction) *transactionData {

@@ -28,4 +28,7 @@ const (
 	QueueConsumerNum           = 10
 	QueueConsumerTimerDuration = 100 * time.Millisecond
 	QueueConsumerBufSize       = 150
+
+	EventAggregatorInterval       = time.Second * 3
+	TransactionAggregatorInterval = time.Second * 3
 )

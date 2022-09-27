@@ -15,10 +15,9 @@ type Manager struct {
 
 func newManager() *Manager {
 	manager := &Manager{
-		sender: sender.NewTcpSender(),
+		sender:     sender.NewTcpSender(),
+		aggregator: newLocalAggregator(),
 	}
-
-	manager.aggregator = newLocalAggregator()
 
 	return manager
 }

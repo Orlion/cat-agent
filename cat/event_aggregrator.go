@@ -2,9 +2,12 @@ package cat
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Orlion/cat-agent/cat/config"
 	"github.com/Orlion/cat-agent/cat/message"
+	"github.com/Orlion/cat-agent/log"
+	"github.com/Orlion/cat-agent/pkg/atomicx"
 )
 
 type eventData struct {
@@ -20,15 +23,54 @@ func (ed *eventData) add(event *message.Event) {
 }
 
 type EventAggregator struct {
-	datas map[string]*eventData
+	datas      map[string]*eventData
+	ch         chan *message.Event
+	inShutdown atomicx.Bool
 }
 
 func newEventAggregator() *EventAggregator {
 	return &EventAggregator{}
 }
 
-func (ea *EventAggregator) logEvent(event *message.Event) {
+func (ea *EventAggregator) run() {
+	go func() {
+		ticker := time.NewTicker(config.EventAggregatorInterval)
 
+		for !ea.inShutdown.Get() {
+			select {
+			case event := <-ea.ch:
+				ea.getOrDefault(event).add(event)
+			case <-ticker.C:
+				ea.flush()
+			}
+		}
+
+		ticker.Stop()
+	}()
+}
+
+func (ea *EventAggregator) shutdown() {
+	ea.inShutdown.SetTrue()
+
+	close(ea.ch)
+
+	for event := range ea.ch {
+		ea.getOrDefault(event).add(event)
+	}
+
+	ea.flush()
+}
+
+func (ea *EventAggregator) logEvent(event *message.Event) {
+	if ea.inShutdown.Get() {
+		return
+	}
+
+	select {
+	case ea.ch <- event:
+	default:
+		log.Warnf("event aggregatro's ch is full, event: %s,%s  has been discarded", event.GetType(), event.GetName())
+	}
 }
 
 func (ea *EventAggregator) getOrDefault(event *message.Event) *eventData {

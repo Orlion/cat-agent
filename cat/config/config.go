@@ -36,7 +36,7 @@ type ConfigService struct {
 
 func (c *ConfigService) run() error {
 	ticker := time.NewTicker(time.Minute * 1)
-	if err := c.pollRouters(); err != nil {
+	if err := c.pullRouters(); err != nil {
 		return err
 	}
 
@@ -46,7 +46,7 @@ func (c *ConfigService) run() error {
 		for {
 			select {
 			case <-ticker.C:
-				if err := c.pollRouters(); err != nil {
+				if err := c.pullRouters(); err != nil {
 					log.Error(err.Error())
 				}
 			case <-c.done:
@@ -115,21 +115,26 @@ func (c *ConfigService) updateRouters(router string) {
 		return
 	} else if oldLen == 0 {
 		log.Infof("routers has been initialized to: %s", newRouters)
-		c.routers = newRouters
+		c.setRoutersLocked(newRouters)
 	} else if oldLen != newLen {
 		log.Infof("routers has been changed to: %s", newRouters)
-		c.routers = newRouters
+		c.setRoutersLocked(newRouters)
 	} else {
 		for i := 0; i < oldLen; i++ {
 			if c.routers[i] != newRouters[i] {
 				log.Infof("routers has been changed to: %s", newRouters)
-				c.routers = newRouters
+				c.setRoutersLocked(newRouters)
 				break
 			}
 		}
 	}
 
 	log.Info("cannot established a connection to cat server.")
+}
+
+func (c *ConfigService) setRoutersLocked(routers []string) {
+	c.routers = routers
+	c.routersCond.Broadcast()
 }
 
 func (c *ConfigService) updateBlock(v string) {
