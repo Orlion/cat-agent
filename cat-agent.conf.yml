@@ -3,4 +3,4 @@ server:
 
 cat:
   domain: www.cat-agent-sample.com
-  servers: ['127.0.0.1:8001', '127.0.0.1:8002', '127.0.0.1:8003']
+  servers: ['127.0.0.1:8080']

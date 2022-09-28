@@ -5,6 +5,7 @@ import (
 
 	"github.com/Orlion/cat-agent/cat/message"
 	"github.com/Orlion/cat-agent/cat/sender"
+	"github.com/Orlion/cat-agent/log"
 )
 
 type Manager struct {
@@ -23,10 +24,14 @@ func newManager() *Manager {
 }
 
 func (m *Manager) run() {
+	log.Info("manager running...")
 	m.sender.Run()
+	m.aggregator.run()
 }
 
 func (m *Manager) shutdown() {
+	log.Info("manager shutdown...")
+	m.aggregator.shutdown()
 	m.sender.Shutdown()
 }
 

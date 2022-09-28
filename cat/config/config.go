@@ -43,11 +43,13 @@ func newConfigService(config *Config) (*ConfigService, error) {
 	}
 	c.mu = sync.RWMutex{}
 	c.routersCond = sync.NewCond(&c.mu)
+	c.wg = new(sync.WaitGroup)
 
 	return c, nil
 }
 
 func (c *ConfigService) run() error {
+	log.Info("config service running...")
 	ticker := time.NewTicker(time.Minute * 1)
 	if err := c.pullRouters(); err != nil {
 		return err
@@ -125,9 +127,10 @@ func (c *ConfigService) updateRouters(router string) {
 	oldLen, newLen := len(c.routers), len(newRouters)
 
 	if newLen == 0 {
+		log.Info("cannot established a connection to cat server")
 		return
 	} else if oldLen == 0 {
-		log.Infof("routers has been initialized to: %s", newRouters)
+		log.Infof("routers has been initialized to: %v", newRouters)
 		c.setRoutersLocked(newRouters)
 	} else if oldLen != newLen {
 		log.Infof("routers has been changed to: %s", newRouters)
@@ -141,8 +144,6 @@ func (c *ConfigService) updateRouters(router string) {
 			}
 		}
 	}
-
-	log.Info("cannot established a connection to cat server.")
 }
 
 func (c *ConfigService) setRoutersLocked(routers []string) {
@@ -153,11 +154,11 @@ func (c *ConfigService) setRoutersLocked(routers []string) {
 func (c *ConfigService) updateBlock(v string) {
 	if v == "false" {
 		if atomic.SwapUint32(&c.enable, 1) == 0 {
-			log.Info("Cat has been enabled.")
+			log.Info("cat has been enabled")
 		}
 	} else {
 		if atomic.SwapUint32(&c.enable, 0) == 0 {
-			log.Info("Cat has been enabled.")
+			log.Info("cat has been disabled")
 		}
 	}
 }

@@ -33,6 +33,7 @@ func newEventAggregator() *EventAggregator {
 }
 
 func (ea *EventAggregator) run() {
+	log.Info("event aggregator running...")
 	go func() {
 		ticker := time.NewTicker(config.EventAggregatorTickerDuration)
 
@@ -50,6 +51,8 @@ func (ea *EventAggregator) run() {
 }
 
 func (ea *EventAggregator) shutdown() {
+	log.Info("event aggregator shutdown...")
+
 	ea.inShutdown.SetTrue()
 
 	close(ea.ch)

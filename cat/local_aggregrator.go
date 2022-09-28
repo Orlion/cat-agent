@@ -14,6 +14,16 @@ func newLocalAggregator() *LocalAggregator {
 	}
 }
 
+func (la *LocalAggregator) run() {
+	la.ea.run()
+	la.ta.run()
+}
+
+func (la *LocalAggregator) shutdown() {
+	la.ea.shutdown()
+	la.ta.shutdown()
+}
+
 func (la *LocalAggregator) aggregate(tree *message.MessageTree) {
 	msg := tree.GetMessage()
 	switch msg.(type) {

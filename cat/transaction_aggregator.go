@@ -74,6 +74,7 @@ func newTransactionAggregator() *TransactionAggregator {
 }
 
 func (ta *TransactionAggregator) run() {
+	log.Info("transaction aggregator running...")
 	go func() {
 		ticker := time.NewTicker(config.TransactionAggregatorTickerDuration)
 
@@ -91,6 +92,7 @@ func (ta *TransactionAggregator) run() {
 }
 
 func (ta *TransactionAggregator) shutdown() {
+	log.Info("transaction aggregator shutdown...")
 	ta.inShutdown.SetTrue()
 
 	close(ta.ch)

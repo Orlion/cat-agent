@@ -31,11 +31,13 @@ func NewTcpSender() *TcpSender {
 }
 
 func (s *TcpSender) Run() {
+	log.Info("tcp sender running...")
+
 	for _, router := range s.config.GetRouters() {
 		for i := 0; i < config.NormalQueueConsumerNum; i++ {
 			s.wg.Add(1)
 			go func(id int) {
-				s.consume(router, id, s.normal)
+				s.consume(router, id, 0)
 				s.wg.Done()
 			}(i)
 		}
@@ -43,7 +45,7 @@ func (s *TcpSender) Run() {
 		for i := 0; i < config.HighQueueConsumerNum; i++ {
 			s.wg.Add(1)
 			go func(id int) {
-				s.consume(router, id, s.high)
+				s.consume(router, id, 1)
 				s.wg.Done()
 			}(i)
 		}
@@ -62,12 +64,15 @@ func (s *TcpSender) Run() {
 }
 
 func (s *TcpSender) restart() {
+	log.Info("tcp sender restart")
 	s.inShutdown.SetTrue()
 	s.wg.Wait()
 	s.Run()
 }
 
 func (s *TcpSender) Shutdown() {
+	log.Info("tcp sender shutdown...")
+
 	s.inShutdown.SetTrue()
 
 	close(s.normal)
@@ -99,7 +104,7 @@ func (s *TcpSender) Shutdown() {
 	s.wg.Wait()
 }
 
-func (s *TcpSender) consume(server string, id int, ch chan *message.MessageTree) error {
+func (s *TcpSender) consume(server string, id int, chId int8) error {
 	conn, err := net.DialTimeout("tcp", server, time.Second)
 	if err != nil {
 		log.Errorf("consumer try dial to %s error: %s", server, err.Error())
@@ -107,9 +112,15 @@ func (s *TcpSender) consume(server string, id int, ch chan *message.MessageTree)
 
 	ticker := time.NewTicker(config.QueueConsumerTickerDuration)
 
-	buf := make([]*message.MessageTree, config.QueueConsumerBufSize)
+	buf := make([]*message.MessageTree, 0, config.QueueConsumerBufSize)
 
-	log.Infof("tcp sender consumer: %d running...", id)
+	ch := s.normal
+	if chId == 0 {
+		log.Infof("tcp sender normal consumer: %d running...", id)
+	} else {
+		ch = s.high
+		log.Infof("tcp sender high consumer: %d running...", id)
+	}
 
 	for !s.inShutdown.Get() {
 		select {
@@ -145,6 +156,9 @@ func (s *TcpSender) consume(server string, id int, ch chan *message.MessageTree)
 }
 
 func (s *TcpSender) flush(conn net.Conn, buf []*message.MessageTree) error {
+	if len(buf) == 0 {
+		return nil
+	}
 	// conn.SetWriteDeadline(time.Now().Add(time.Second))
 	// todo
 	fmt.Println(buf)
