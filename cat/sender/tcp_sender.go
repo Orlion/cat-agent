@@ -37,7 +37,7 @@ func (s *TcpSender) Run() {
 		for i := 0; i < config.TcpSenderNormalQueueConsumerNum; i++ {
 			s.wg.Add(1)
 			go func(id int) {
-				s.consume(router, id, 0)
+				newConsumer(id, router, "normal", s.normal).run()
 				s.wg.Done()
 			}(i)
 		}
@@ -45,7 +45,7 @@ func (s *TcpSender) Run() {
 		for i := 0; i < config.TcpSenderHighQueueConsumerNum; i++ {
 			s.wg.Add(1)
 			go func(id int) {
-				s.consume(router, id, 1)
+				newConsumer(id, router, "high", s.high).run()
 				s.wg.Done()
 			}(i)
 		}
@@ -65,8 +65,7 @@ func (s *TcpSender) Run() {
 
 func (s *TcpSender) restart() {
 	log.Info("tcp sender restart")
-	s.inShutdown.SetTrue()
-	s.wg.Wait()
+	s.Shutdown()
 	s.Run()
 }
 
@@ -78,92 +77,9 @@ func (s *TcpSender) Shutdown() {
 	close(s.normal)
 	close(s.high)
 
-	conn, err := net.DialTimeout("tcp", config.GetInstance().GetRouters()[0], time.Second)
-	if err == nil {
-		buf := make([]*message.MessageTree, config.TcpSenderQueueConsumerBufSize)
-
-		for msg := range s.high {
-			buf = append(buf, msg)
-			if len(buf) == config.TcpSenderQueueConsumerBufSize {
-				s.flush(conn, buf)
-			}
-		}
-
-		for msg := range s.normal {
-			buf = append(buf, msg)
-			if len(buf) == config.TcpSenderQueueConsumerBufSize {
-				s.flush(conn, buf)
-			}
-		}
-
-		s.flush(conn, buf)
-
-		conn.Close()
-	}
-
 	s.wg.Wait()
-}
 
-func (s *TcpSender) consume(server string, id int, chId int8) error {
-	conn, err := net.DialTimeout("tcp", server, time.Second)
-	if err != nil {
-		log.Errorf("consumer try dial to %s error: %s", server, err.Error())
-	}
-
-	ticker := time.NewTicker(config.TcpSenderQueueConsumerTickerDuration)
-
-	buf := make([]*message.MessageTree, 0, config.TcpSenderQueueConsumerBufSize)
-
-	ch := s.normal
-	if chId == 0 {
-		log.Infof("tcp sender normal consumer: %d running...", id)
-	} else {
-		ch = s.high
-		log.Infof("tcp sender high consumer: %d running...", id)
-	}
-
-	for !s.inShutdown.Get() {
-		select {
-		case msg := <-ch:
-			buf = append(buf, msg)
-			if len(buf) == config.TcpSenderQueueConsumerBufSize {
-				if conn == nil {
-					conn, err = net.DialTimeout("tcp", server, time.Second)
-					if err != nil {
-						log.Errorf("consumer retry dial to %s error: %s", server, err.Error())
-					}
-				}
-				err = s.flush(conn, buf)
-				if err != nil {
-					log.Errorf("consumer flush %s error: %s", server, err.Error())
-				}
-				buf = buf[:0]
-			}
-		case <-ticker.C:
-			s.flush(conn, buf)
-			buf = buf[:0]
-		}
-	}
-
-	s.flush(conn, buf)
-	buf = nil
-
-	conn.Close()
-
-	ticker.Stop()
-
-	return nil
-}
-
-func (s *TcpSender) flush(conn net.Conn, buf []*message.MessageTree) error {
-	if len(buf) == 0 {
-		return nil
-	}
-	// conn.SetWriteDeadline(time.Now().Add(time.Second))
-	// todo
-	fmt.Println(buf)
-	// conn.Write(nil)
-	return nil
+	log.Info("tcp sender exit")
 }
 
 func (s *TcpSender) Offer(tree *message.MessageTree) {
@@ -184,4 +100,106 @@ func (s *TcpSender) Offer(tree *message.MessageTree) {
 
 		}
 	}
+}
+
+type Consumer struct {
+	name     string
+	server   string
+	ch       <-chan *message.MessageTree
+	conn     net.Conn
+	connTime time.Time
+	buf      []*message.MessageTree
+}
+
+func newConsumer(id int, server, chName string, ch <-chan *message.MessageTree) *Consumer {
+	return &Consumer{
+		name:   fmt.Sprintf("%s-%s-%d", chName, server, id),
+		server: server,
+		ch:     ch,
+		buf:    make([]*message.MessageTree, 0, config.TcpSenderQueueConsumerBufSize),
+	}
+}
+
+func (c *Consumer) run() {
+	log.Infof("consumer %s running...", c.name)
+
+	ticker := time.NewTicker(config.TcpSenderQueueConsumerTickerDuration)
+
+Loop:
+	for {
+		select {
+		case msg, ok := <-c.ch:
+			if !ok {
+				break Loop
+			}
+			c.buf = append(c.buf, msg)
+			if len(c.buf) == config.TcpSenderQueueConsumerBufSize {
+				c.flush(false)
+			}
+		case <-ticker.C:
+			c.flush(false)
+		}
+	}
+
+	ticker.Stop()
+
+	c.flush(true)
+	c.buf = nil
+
+	if c.conn != nil {
+		c.conn.Close()
+	}
+}
+
+func (c *Consumer) connect(nonblock bool) error {
+	var (
+		err       error
+		tempDelay time.Duration
+	)
+
+	if c.conn != nil && time.Now().Sub(c.connTime) < 10*time.Minute {
+		return nil
+	}
+
+	c.conn = nil
+
+	for {
+		c.conn, err = net.DialTimeout("tcp", c.server, time.Second)
+		if err == nil {
+			c.connTime = time.Now()
+			break
+		}
+
+		if nonblock {
+			return err
+		}
+
+		log.Errorf("consumer %s dial to %s error: %s, tempDelay: %d", c.name, c.server, err, tempDelay)
+
+		if tempDelay == 0 {
+			tempDelay = 100 * time.Millisecond
+		} else {
+			tempDelay *= 2
+		}
+		if max := 5 * time.Second; tempDelay > max {
+			tempDelay = max
+		}
+
+		time.Sleep(tempDelay)
+	}
+
+	return nil
+}
+
+func (c *Consumer) flush(nonblock bool) {
+	if len(c.buf) == 0 {
+		return
+	}
+	if err := c.connect(nonblock); err != nil {
+		return
+	}
+	// conn.SetWriteDeadline(time.Now().Add(time.Second))
+	// todo
+	fmt.Println(c.buf)
+	c.buf = c.buf[:0]
 }

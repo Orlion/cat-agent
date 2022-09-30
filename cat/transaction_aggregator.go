@@ -110,6 +110,7 @@ func (ta *TransactionAggregator) shutdown() {
 	log.Info("transaction aggregator shutdown...")
 	ta.inShutdown.SetTrue()
 	<-ta.done
+	log.Info("transaction aggregator exit")
 }
 
 func (ta *TransactionAggregator) logTransaction(transaction *message.Transaction) {

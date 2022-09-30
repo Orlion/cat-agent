@@ -125,10 +125,12 @@ func (srv *Server) Shutdown(ctx context.Context) error {
 	defer ticker.Stop()
 	for {
 		if srv.getConnNum() == 0 {
+			log.Info("server exit")
 			return lnerr
 		}
 		select {
 		case <-ctx.Done():
+			log.Info("server exit")
 			return ctx.Err()
 		case <-ticker.C:
 		}

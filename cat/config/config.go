@@ -77,8 +77,10 @@ func (c *ConfigService) run() error {
 }
 
 func (c *ConfigService) shutdown() {
+	log.Info("config service shutdown...")
 	close(c.done)
 	c.wg.Wait()
+	log.Info("config service exit")
 }
 
 func (c *ConfigService) GetDomain() string {

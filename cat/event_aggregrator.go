@@ -69,6 +69,7 @@ func (ea *EventAggregator) shutdown() {
 	log.Info("event aggregator shutdown...")
 	ea.inShutdown.SetTrue()
 	<-ea.done
+	log.Info("event aggregator exit")
 }
 
 func (ea *EventAggregator) logEvent(event *message.Event) {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/Orlion/cat-agent/cat/config"
 	"github.com/Orlion/cat-agent/cat/message"
+	"github.com/Orlion/cat-agent/log"
 )
 
 var catInstance *Cat
@@ -20,9 +21,11 @@ func (cat *Cat) run() {
 }
 
 func (cat *Cat) shutdown() {
+	log.Info("cat shutdown...")
 	cat.inShutdown = true
 	config.Shutdown()
 	cat.manager.shutdown()
+	log.Info("cat exit")
 }
 
 func (cat *Cat) shuttingDown() bool {
