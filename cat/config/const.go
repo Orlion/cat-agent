@@ -36,4 +36,6 @@ const (
 	TransactionAggregatorChannelSize    = 1000
 
 	RouterUpdateDuration = 30 * time.Second
+
+	BinaryProtocol = "NT1"
 )

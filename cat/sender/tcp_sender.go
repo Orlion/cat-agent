@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Orlion/cat-agent/cat/config"
+	"github.com/Orlion/cat-agent/cat/encoder"
 	"github.com/Orlion/cat-agent/cat/message"
 	"github.com/Orlion/cat-agent/log"
 	"github.com/Orlion/cat-agent/pkg/atomicx"
@@ -103,6 +104,7 @@ func (s *TcpSender) Offer(tree *message.MessageTree) {
 }
 
 type Consumer struct {
+	encoder  *encoder.BinaryEncoder
 	name     string
 	server   string
 	ch       <-chan *message.MessageTree
@@ -113,10 +115,11 @@ type Consumer struct {
 
 func newConsumer(id int, server, chName string, ch <-chan *message.MessageTree) *Consumer {
 	return &Consumer{
-		name:   fmt.Sprintf("%s-%s-%d", chName, server, id),
-		server: server,
-		ch:     ch,
-		buf:    make([]*message.MessageTree, 0, config.TcpSenderQueueConsumerBufSize),
+		encoder: encoder.NewBinaryEncoder(),
+		name:    fmt.Sprintf("%s-%s-%d", chName, server, id),
+		server:  server,
+		ch:      ch,
+		buf:     make([]*message.MessageTree, 0, config.TcpSenderQueueConsumerBufSize),
 	}
 }
 
@@ -198,8 +201,12 @@ func (c *Consumer) flush(nonblock bool) {
 	if err := c.connect(nonblock); err != nil {
 		return
 	}
-	// conn.SetWriteDeadline(time.Now().Add(time.Second))
-	// todo
-	fmt.Println(c.buf)
+
+	c.conn.SetWriteDeadline(time.Now().Add(time.Second))
+
+	for _, tree := range c.buf {
+		c.encoder.EncodeMessageTree(tree)
+	}
+
 	c.buf = c.buf[:0]
 }
