@@ -26,10 +26,15 @@ type EventAggregator struct {
 	datas      map[string]*eventData
 	ch         chan *message.Event
 	inShutdown atomicx.Bool
+	done       chan struct{}
 }
 
 func newEventAggregator() *EventAggregator {
-	return &EventAggregator{}
+	return &EventAggregator{
+		datas: make(map[string]*eventData),
+		ch:    make(chan *message.Event, config.EventAggregatorChannelSize),
+		done:  make(chan struct{}),
+	}
 }
 
 func (ea *EventAggregator) run() {
@@ -47,21 +52,23 @@ func (ea *EventAggregator) run() {
 		}
 
 		ticker.Stop()
+
+		close(ea.ch)
+
+		for event := range ea.ch {
+			ea.getOrDefault(event).add(event)
+		}
+
+		ea.flush()
+
+		close(ea.done)
 	}()
 }
 
 func (ea *EventAggregator) shutdown() {
 	log.Info("event aggregator shutdown...")
-
 	ea.inShutdown.SetTrue()
-
-	close(ea.ch)
-
-	for event := range ea.ch {
-		ea.getOrDefault(event).add(event)
-	}
-
-	ea.flush()
+	<-ea.done
 }
 
 func (ea *EventAggregator) logEvent(event *message.Event) {

@@ -67,10 +67,15 @@ type TransactionAggregator struct {
 	datas      map[string]*transactionData
 	ch         chan *message.Transaction
 	inShutdown atomicx.Bool
+	done       chan struct{}
 }
 
 func newTransactionAggregator() *TransactionAggregator {
-	return &TransactionAggregator{}
+	return &TransactionAggregator{
+		datas: make(map[string]*transactionData),
+		ch:    make(chan *message.Transaction, config.TransactionAggregatorChannelSize),
+		done:  make(chan struct{}),
+	}
 }
 
 func (ta *TransactionAggregator) run() {
@@ -88,20 +93,23 @@ func (ta *TransactionAggregator) run() {
 		}
 
 		ticker.Stop()
+
+		close(ta.ch)
+
+		for transaction := range ta.ch {
+			ta.getOrDefault(transaction).add(transaction)
+		}
+
+		ta.flush()
+
+		close(ta.done)
 	}()
 }
 
 func (ta *TransactionAggregator) shutdown() {
 	log.Info("transaction aggregator shutdown...")
 	ta.inShutdown.SetTrue()
-
-	close(ta.ch)
-
-	for transaction := range ta.ch {
-		ta.getOrDefault(transaction).add(transaction)
-	}
-
-	ta.flush()
+	<-ta.done
 }
 
 func (ta *TransactionAggregator) logTransaction(transaction *message.Transaction) {
@@ -147,6 +155,8 @@ func (ta *TransactionAggregator) flush() {
 		trans := message.NewTransaction(data.t, data.name, message.SUCCESS, data.encode(), 0, nil, 0)
 		trans.AddChild(trans)
 	}
+
+	ta.datas = make(map[string]*transactionData)
 
 	tree := message.NewMessageTree()
 	tree.SetMessage(trans)

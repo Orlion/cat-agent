@@ -2,11 +2,13 @@ package server
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"net"
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Orlion/cat-agent/log"
@@ -14,7 +16,8 @@ import (
 )
 
 var (
-	ErrServerClosed = errors.New("server: Server closed")
+	ErrServerClosed      = errors.New("server: Server closed")
+	shutdownPollInterval = 500 * time.Millisecond
 )
 
 type Handler func(req *Request) (status Status, payload []byte)
@@ -32,6 +35,7 @@ type Server struct {
 	mu       sync.Mutex
 	listener net.Listener
 	doneChan chan struct{}
+	connNum  int64
 }
 
 func NewServer(config *Config) *Server {
@@ -99,11 +103,16 @@ func (srv *Server) serve(ln net.Listener) error {
 		}
 
 		c := srv.newConn(rw)
-		go c.serve()
+		go func() {
+			c.serve()
+			srv.decrConnNum()
+		}()
 	}
 }
 
-func (srv *Server) Shutdown() error {
+func (srv *Server) Shutdown(ctx context.Context) error {
+	log.Info("server shutdown")
+
 	srv.inShutdown.SetTrue()
 
 	srv.mu.Lock()
@@ -112,7 +121,18 @@ func (srv *Server) Shutdown() error {
 	lnerr := srv.listener.Close()
 	srv.closeDoneChanLocked()
 
-	return lnerr
+	ticker := time.NewTicker(shutdownPollInterval)
+	defer ticker.Stop()
+	for {
+		if srv.getConnNum() == 0 {
+			return lnerr
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+		}
+	}
 }
 
 func (srv *Server) shuttingDown() bool {
@@ -148,5 +168,19 @@ func (srv *Server) newConn(rwc net.Conn) *conn {
 		bufr:   bufio.NewReader(rwc),
 	}
 
+	srv.incrConnNum()
+
 	return c
+}
+
+func (srv *Server) getConnNum() int64 {
+	return atomic.LoadInt64(&srv.connNum)
+}
+
+func (srv *Server) incrConnNum() {
+	atomic.AddInt64(&srv.connNum, 1)
+}
+
+func (srv *Server) decrConnNum() {
+	atomic.AddInt64(&srv.connNum, -1)
 }

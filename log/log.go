@@ -58,3 +58,7 @@ func Error(args ...interface{}) {
 func Errorf(template string, args ...interface{}) {
 	logger.Errorf(template, args)
 }
+
+func Shutdown() {
+	logger.Sync()
+}

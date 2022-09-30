@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -40,12 +41,13 @@ func main() {
 
 	srv := createServer(conf.Server)
 
-	go waitGracefulStop(srv)
+	go func() {
+		if err := srv.ListenAndServe(); err != nil {
+			fmt.Fprintln(os.Stderr, "server listen and serve error: "+err.Error())
+		}
+	}()
 
-	if err := srv.ListenAndServe(); err != nil {
-		fmt.Fprintln(os.Stderr, "server listen and serve error: "+err.Error())
-		os.Exit(1)
-	}
+	waitGracefulStop(srv)
 }
 
 func createServer(config *server.Config) *server.Server {
@@ -63,7 +65,10 @@ func waitGracefulStop(srv *server.Server) {
 		switch s {
 		case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
 			log.Infof("received signal: %s will stop...", s.String())
-			srv.Shutdown()
+			ctx, _ := context.WithTimeout(context.Background(), 3000*time.Millisecond)
+			srv.Shutdown(ctx)
+			cat.Shutdown()
+			log.Shutdown()
 			time.Sleep(3 * time.Second)
 			return
 		case syscall.SIGHUP:

@@ -40,20 +40,22 @@ func newConfigService(config *Config) (*ConfigService, error) {
 
 	c := &ConfigService{
 		config: config,
+		wg:     new(sync.WaitGroup),
+		done:   make(chan struct{}),
 	}
 	c.mu = sync.RWMutex{}
 	c.routersCond = sync.NewCond(&c.mu)
-	c.wg = new(sync.WaitGroup)
 
 	return c, nil
 }
 
 func (c *ConfigService) run() error {
 	log.Info("config service running...")
-	ticker := time.NewTicker(time.Minute * 1)
 	if err := c.pullRouters(); err != nil {
 		return err
 	}
+
+	ticker := time.NewTicker(RouterUpdateDuration)
 
 	c.wg.Add(1)
 	go func() {

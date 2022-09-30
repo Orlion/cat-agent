@@ -22,14 +22,18 @@ const (
 	ThreadNameCatAgent      = "cat-agent"
 	ThreadGroupNameCatAgent = "cat-agent-group"
 
-	HighPriorityQueueSize   = 50000
-	NormalPriorityQueueSize = 50000
+	TcpSenderHighQueueSize   = 50000
+	TcpSenderNormalQueueSize = 50000
 
-	NormalQueueConsumerNum      = 10
-	HighQueueConsumerNum        = 10
-	QueueConsumerTickerDuration = 100 * time.Millisecond
-	QueueConsumerBufSize        = 150
+	TcpSenderNormalQueueConsumerNum      = 10
+	TcpSenderHighQueueConsumerNum        = 10
+	TcpSenderQueueConsumerTickerDuration = 100 * time.Millisecond
+	TcpSenderQueueConsumerBufSize        = 150
 
-	EventAggregatorTickerDuration       = time.Second * 3
-	TransactionAggregatorTickerDuration = time.Second * 3
+	EventAggregatorTickerDuration       = 3 * time.Second
+	TransactionAggregatorTickerDuration = 3 * time.Second
+	EventAggregatorChannelSize          = 1000
+	TransactionAggregatorChannelSize    = 1000
+
+	RouterUpdateDuration = 30 * time.Second
 )

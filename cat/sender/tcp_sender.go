@@ -23,8 +23,8 @@ type TcpSender struct {
 
 func NewTcpSender() *TcpSender {
 	return &TcpSender{
-		normal: make(chan *message.MessageTree, config.NormalPriorityQueueSize),
-		high:   make(chan *message.MessageTree, config.HighPriorityQueueSize),
+		normal: make(chan *message.MessageTree, config.TcpSenderNormalQueueSize),
+		high:   make(chan *message.MessageTree, config.TcpSenderHighQueueSize),
 		config: config.GetInstance(),
 		wg:     new(sync.WaitGroup),
 	}
@@ -34,7 +34,7 @@ func (s *TcpSender) Run() {
 	log.Info("tcp sender running...")
 
 	for _, router := range s.config.GetRouters() {
-		for i := 0; i < config.NormalQueueConsumerNum; i++ {
+		for i := 0; i < config.TcpSenderNormalQueueConsumerNum; i++ {
 			s.wg.Add(1)
 			go func(id int) {
 				s.consume(router, id, 0)
@@ -42,7 +42,7 @@ func (s *TcpSender) Run() {
 			}(i)
 		}
 
-		for i := 0; i < config.HighQueueConsumerNum; i++ {
+		for i := 0; i < config.TcpSenderHighQueueConsumerNum; i++ {
 			s.wg.Add(1)
 			go func(id int) {
 				s.consume(router, id, 1)
@@ -80,18 +80,18 @@ func (s *TcpSender) Shutdown() {
 
 	conn, err := net.DialTimeout("tcp", config.GetInstance().GetRouters()[0], time.Second)
 	if err == nil {
-		buf := make([]*message.MessageTree, config.QueueConsumerBufSize)
+		buf := make([]*message.MessageTree, config.TcpSenderQueueConsumerBufSize)
 
 		for msg := range s.high {
 			buf = append(buf, msg)
-			if len(buf) == config.QueueConsumerBufSize {
+			if len(buf) == config.TcpSenderQueueConsumerBufSize {
 				s.flush(conn, buf)
 			}
 		}
 
 		for msg := range s.normal {
 			buf = append(buf, msg)
-			if len(buf) == config.QueueConsumerBufSize {
+			if len(buf) == config.TcpSenderQueueConsumerBufSize {
 				s.flush(conn, buf)
 			}
 		}
@@ -110,9 +110,9 @@ func (s *TcpSender) consume(server string, id int, chId int8) error {
 		log.Errorf("consumer try dial to %s error: %s", server, err.Error())
 	}
 
-	ticker := time.NewTicker(config.QueueConsumerTickerDuration)
+	ticker := time.NewTicker(config.TcpSenderQueueConsumerTickerDuration)
 
-	buf := make([]*message.MessageTree, 0, config.QueueConsumerBufSize)
+	buf := make([]*message.MessageTree, 0, config.TcpSenderQueueConsumerBufSize)
 
 	ch := s.normal
 	if chId == 0 {
@@ -126,7 +126,7 @@ func (s *TcpSender) consume(server string, id int, chId int8) error {
 		select {
 		case msg := <-ch:
 			buf = append(buf, msg)
-			if len(buf) == config.QueueConsumerBufSize {
+			if len(buf) == config.TcpSenderQueueConsumerBufSize {
 				if conn == nil {
 					conn, err = net.DialTimeout("tcp", server, time.Second)
 					if err != nil {
