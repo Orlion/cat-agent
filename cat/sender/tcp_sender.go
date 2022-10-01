@@ -1,6 +1,8 @@
 package sender
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"net"
 	"sync"
@@ -110,7 +112,8 @@ type Consumer struct {
 	ch       <-chan *message.MessageTree
 	conn     net.Conn
 	connTime time.Time
-	buf      []*message.MessageTree
+	trees    []*message.MessageTree
+	buf      *bytes.Buffer
 }
 
 func newConsumer(id int, server, chName string, ch <-chan *message.MessageTree) *Consumer {
@@ -119,7 +122,8 @@ func newConsumer(id int, server, chName string, ch <-chan *message.MessageTree) 
 		name:    fmt.Sprintf("%s-%s-%d", chName, server, id),
 		server:  server,
 		ch:      ch,
-		buf:     make([]*message.MessageTree, 0, config.TcpSenderQueueConsumerBufSize),
+		trees:   make([]*message.MessageTree, 0, config.TcpSenderQueueConsumerBufSize),
+		buf:     bytes.NewBuffer([]byte{}),
 	}
 }
 
@@ -135,8 +139,8 @@ Loop:
 			if !ok {
 				break Loop
 			}
-			c.buf = append(c.buf, msg)
-			if len(c.buf) == config.TcpSenderQueueConsumerBufSize {
+			c.trees = append(c.trees, msg)
+			if len(c.trees) == config.TcpSenderQueueConsumerBufSize {
 				c.flush(false)
 			}
 		case <-ticker.C:
@@ -195,18 +199,41 @@ func (c *Consumer) connect(nonblock bool) error {
 }
 
 func (c *Consumer) flush(nonblock bool) {
-	if len(c.buf) == 0 {
+	if len(c.trees) == 0 {
 		return
 	}
 	if err := c.connect(nonblock); err != nil {
 		return
 	}
 
-	c.conn.SetWriteDeadline(time.Now().Add(time.Second))
-
-	for _, tree := range c.buf {
+	c.buf.Reset()
+	b := make([]byte, 4)
+	for _, tree := range c.trees {
+		c.encoder.Reset()
 		c.encoder.EncodeMessageTree(tree)
+
+		binary.BigEndian.PutUint32(b, uint32(c.encoder.BufLen()))
+		c.buf.Write(b)
+		c.buf.Write(c.encoder.Bytes())
 	}
 
-	c.buf = c.buf[:0]
+	c.trees = c.trees[:0]
+
+	if err := c.conn.SetWriteDeadline(time.Now().Add(time.Second)); err != nil {
+		log.Warnf("error: %s occurred while setting write deadline, connection has been dropped", err.Error())
+		c.conn = nil
+	}
+
+	for {
+		n, err := c.conn.Write(c.buf.Bytes())
+		if err != nil {
+			log.Warnf("error: %s occurred while writing data, connection has been dropped", err.Error())
+			c.conn = nil
+			return
+		}
+		c.buf.Next(n)
+		if c.buf.Len() < 1 {
+			break
+		}
+	}
 }

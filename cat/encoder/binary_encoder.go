@@ -18,6 +18,14 @@ func NewBinaryEncoder() *BinaryEncoder {
 	}
 }
 
+func (e *BinaryEncoder) BufLen() int {
+	return e.buf.Len()
+}
+
+func (e *BinaryEncoder) Bytes() []byte {
+	return e.buf.Bytes()
+}
+
 func (e *BinaryEncoder) Reset() {
 	e.buf.Reset()
 }
