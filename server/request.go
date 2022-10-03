@@ -2,14 +2,17 @@ package server
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"time"
+
+	"github.com/Orlion/cat-agent/log"
 )
 
 type Cmd uint32
 
 const (
-	CmdCreateMessageId Cmd = iota
+	CmdCreateMessageId Cmd = iota + 1
 	CmdSendMessage
 )
 
@@ -23,7 +26,10 @@ type Request struct {
 
 func (c *conn) readRequest() (req *Request, err error) {
 	if c.server.ReadTimeout != 0 {
-		c.rwc.SetReadDeadline(time.Now().Add(c.server.ReadTimeout))
+		err = c.rwc.SetReadDeadline(time.Now().Add(c.server.ReadTimeout))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// read header
@@ -37,10 +43,13 @@ func (c *conn) readRequest() (req *Request, err error) {
 	req.Cmd = Cmd(binary.BigEndian.Uint32(buf[0:4]))
 	req.Length = binary.BigEndian.Uint32(buf[4:8])
 
+	log.Debugf("recv request from %s, cmd: %d, length: %d", c.rwc.RemoteAddr().String(), req.Cmd, req.Length)
+
 	if req.Length > ReqHeaderLen {
 		// read body
 		req.Body = make([]byte, req.Length-ReqHeaderLen)
 		_, err = io.ReadFull(c.bufr, req.Body)
+		fmt.Println(req.Body, string(req.Body))
 		if err != nil {
 			return
 		}

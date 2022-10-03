@@ -11,7 +11,7 @@ const (
 	StatusOk Status = iota
 	StatusMsgReadHeaderErr
 	StatusMsgReadMessageErr
-	StatusBadDomain
+	StatusNotFoundCmd
 )
 
 const RespHeaderLen = 8

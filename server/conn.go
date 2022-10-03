@@ -28,10 +28,18 @@ func (c *conn) serve() {
 			return
 		}
 
-		err = c.sendResponse(c.server.handlers[req.Cmd](req))
-		if err != nil {
-			log.Errorf("conn send response error: %s", err)
-			return
+		if handler, exists := c.server.handlers[req.Cmd]; exists {
+			err = c.sendResponse(handler(req))
+			if err != nil {
+				log.Errorf("conn send response error: %s", err)
+				return
+			}
+		} else {
+			err = c.sendResponse(StatusNotFoundCmd, nil)
+			if err != nil {
+				log.Errorf("conn send response error: %s", err)
+				return
+			}
 		}
 	}
 

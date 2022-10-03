@@ -65,10 +65,6 @@ func GetNextId() string {
 	return catInstance.getNextId()
 }
 
-func GetDomain() string {
-	return config.GetInstance().GetDomain()
-}
-
 func Shutdown() {
 	catInstance.shutdown()
 }

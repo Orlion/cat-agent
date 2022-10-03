@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/Orlion/cat-agent/cat"
 	"github.com/Orlion/cat-agent/cat/message"
 	"github.com/Orlion/cat-agent/log"
 	"github.com/Orlion/cat-agent/pkg/dsx"
@@ -41,6 +40,8 @@ func SendMessage(req *server.Request) (status server.Status, payload []byte) {
 		return
 	}
 
+	log.Debugf("read header, domain: %s, threadGroupName: %s, threadId: %s, threadName: %s, messageId: %s, parentMessageId: %s, rootMessageId: %s", r.domain, r.tree.GetThreadGroupName(), r.tree.GetThreadId(), r.tree.GetThreadName(), r.tree.GetMessageId(), r.tree.GetParentMessageId(), r.tree.GetRootMessageId())
+
 	err = r.readMessage()
 	if err != nil {
 		log.Errorf("send message handler read message error: %s", err.Error())
@@ -48,7 +49,9 @@ func SendMessage(req *server.Request) (status server.Status, payload []byte) {
 		return
 	}
 
-	cat.Send(r.tree)
+	fmt.Println(r.tree)
+
+	//cat.Send(r.tree)
 
 	return
 }
@@ -62,19 +65,21 @@ type messageTreeReader struct {
 }
 
 func (r *messageTreeReader) readHeader() error {
+	fmt.Println(111111, r.i)
 	domain, err := r.readElement()
 	if err != nil {
 		return err
 	}
 
 	r.domain = string(domain)
-
+	fmt.Println(222222, r.i)
 	threadGroupName, err := r.readElement()
+	fmt.Println(threadGroupName, err, string(threadGroupName))
 	if err != nil {
 		return err
 	}
 	r.tree.SetThreadGroupName(string(threadGroupName))
-
+	fmt.Println(333333, r.i)
 	threadId, err := r.readElement()
 	if err != nil {
 		return err
@@ -229,7 +234,7 @@ func (r *messageTreeReader) readElement() (b []byte, err error) {
 	for {
 		if r.i >= r.len {
 			err = errBodyEof
-			break
+			return
 		}
 
 		if r.body[r.i] == Lf {
@@ -242,6 +247,8 @@ func (r *messageTreeReader) readElement() (b []byte, err error) {
 		b = append(b, r.body[r.i])
 		r.i++
 	}
+
+	r.i++
 
 	return
 }
