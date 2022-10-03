@@ -3,6 +3,8 @@ package server
 import (
 	"bufio"
 	"net"
+
+	"github.com/Orlion/cat-agent/log"
 )
 
 type conn struct {
@@ -22,11 +24,14 @@ func (c *conn) serve() {
 
 		req, err := c.readRequest()
 		if err != nil {
+			log.Errorf("conn read request error: %s", err)
 			return
 		}
 
-		if handler, exists := c.server.handlers[req.Cmd]; exists {
-			c.sendResponse(handler(req))
+		err = c.sendResponse(c.server.handlers[req.Cmd](req))
+		if err != nil {
+			log.Errorf("conn send response error: %s", err)
+			return
 		}
 	}
 

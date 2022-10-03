@@ -65,7 +65,9 @@ func (srv *Server) ListenAndServe() error {
 		return err
 	}
 
-	return srv.serve(ln)
+	go srv.serve(ln)
+
+	return nil
 }
 
 func (srv *Server) serve(ln net.Listener) error {
@@ -103,6 +105,7 @@ func (srv *Server) serve(ln net.Listener) error {
 		}
 
 		c := srv.newConn(rw)
+		log.Debugf("server new conn from %s", rw.RemoteAddr().String())
 		go func() {
 			c.serve()
 			srv.decrConnNum()

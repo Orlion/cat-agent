@@ -1,5 +1,5 @@
 server:
-  addr: 127.0.0.1:2280
+  addr: 127.0.0.1:2380
 
 cat:
   domain: www.cat-agent-sample.com

@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"strconv"
 	"sync"
@@ -217,6 +218,15 @@ func withDefaultConf(config *Config) error {
 
 	if config.Env == "" {
 		config.Env = DefaultEnv
+	}
+
+	if ip, err := systemx.GetLocalhostIp(); err != nil {
+		log.Warnf("get localhost ip error: %s", err.Error())
+		config.Ip = DefaultIp
+		config.IpHex = DefaultIpHex
+	} else {
+		config.Ip = ip.String()
+		config.IpHex = fmt.Sprintf("%02x%02x%02x%02x", ip[12], ip[13], ip[14], ip[15])
 	}
 
 	if len(config.Servers) < 1 {

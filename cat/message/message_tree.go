@@ -1,7 +1,6 @@
 package message
 
 type MessageTree struct {
-	domain          string
 	message         Message
 	messageId       string
 	parentMessageId string
@@ -14,10 +13,6 @@ type MessageTree struct {
 
 func NewMessageTree() *MessageTree {
 	return &MessageTree{}
-}
-
-func (tree *MessageTree) GetDomain() string {
-	return tree.domain
 }
 
 func (tree *MessageTree) GetMessage() Message {
@@ -50,10 +45,6 @@ func (tree *MessageTree) GetThreadName() string {
 
 func (tree *MessageTree) CanDiscard() bool {
 	return tree.discard
-}
-
-func (tree *MessageTree) SetDomain(domain string) {
-	tree.domain = domain
 }
 
 func (tree *MessageTree) SetMessage(message Message) {

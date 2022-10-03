@@ -113,7 +113,7 @@ func (ea *EventAggregator) flush() {
 
 	tree := message.NewMessageTree()
 	tree.SetMessage(trans)
-	tree.SetMessageId(getNextId())
+	tree.SetMessageId(GetNextId())
 	tree.SetParentMessageId("")
 	tree.SetRootMessageId("")
 	tree.SetThreadGroupName(config.ThreadGroupNameCatAgent)
@@ -121,5 +121,5 @@ func (ea *EventAggregator) flush() {
 	tree.SetThreadName(config.ThreadNameCatAgent)
 	tree.SetDiscard(false)
 
-	catInstance.manager.flush(tree)
+	Send(tree)
 }

@@ -1,6 +1,8 @@
 package systemx
 
-import "os"
+import (
+	"os"
+)
 
 func GetHostname() (string, error) {
 	return os.Hostname()

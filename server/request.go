@@ -35,11 +35,11 @@ func (c *conn) readRequest() (req *Request, err error) {
 
 	req = new(Request)
 	req.Cmd = Cmd(binary.BigEndian.Uint32(buf[0:4]))
-	req.Length = binary.BigEndian.Uint32(buf[4:4])
+	req.Length = binary.BigEndian.Uint32(buf[4:8])
 
 	if req.Length > ReqHeaderLen {
 		// read body
-		req.Body = make([]byte, req.Length-8)
+		req.Body = make([]byte, req.Length-ReqHeaderLen)
 		_, err = io.ReadFull(c.bufr, req.Body)
 		if err != nil {
 			return

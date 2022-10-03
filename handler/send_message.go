@@ -48,16 +48,17 @@ func SendMessage(req *server.Request) (status server.Status, payload []byte) {
 		return
 	}
 
-	cat.Flush(r.tree)
+	cat.Send(r.tree)
 
 	return
 }
 
 type messageTreeReader struct {
-	i    int
-	len  int
-	body []byte
-	tree *message.MessageTree
+	i      int
+	len    int
+	body   []byte
+	domain string
+	tree   *message.MessageTree
 }
 
 func (r *messageTreeReader) readHeader() error {
@@ -65,7 +66,8 @@ func (r *messageTreeReader) readHeader() error {
 	if err != nil {
 		return err
 	}
-	r.tree.SetDomain(string(domain))
+
+	r.domain = string(domain)
 
 	threadGroupName, err := r.readElement()
 	if err != nil {

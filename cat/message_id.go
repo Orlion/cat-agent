@@ -25,5 +25,5 @@ func (f *MessageIdFactory) getNextId() string {
 		atomic.CompareAndSwapUint32(&f.index, currentIndex, 0)
 	}
 
-	return fmt.Sprintf("%s-%s-%d-%d", config.GetInstance().GetDomain(), "todo:ipHex", hour, atomic.AddUint32(&f.index, 1))
+	return fmt.Sprintf("%s-%s-%d-%d", config.GetInstance().GetDomain(), config.GetInstance().GetIpHex(), hour, atomic.AddUint32(&f.index, 1))
 }

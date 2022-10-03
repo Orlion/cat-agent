@@ -1,8 +1,6 @@
 package cat
 
 import (
-	"fmt"
-
 	"github.com/Orlion/cat-agent/cat/config"
 	"github.com/Orlion/cat-agent/cat/message"
 	"github.com/Orlion/cat-agent/log"
@@ -32,12 +30,12 @@ func (cat *Cat) shuttingDown() bool {
 	return cat.inShutdown
 }
 
-func (cat *Cat) flush(tree *message.MessageTree) {
+func (cat *Cat) send(tree *message.MessageTree) {
 	if cat.shuttingDown() {
 		return
 	}
 
-	cat.manager.flush(tree)
+	cat.manager.send(tree)
 }
 
 func (cat *Cat) getNextId() string {
@@ -59,21 +57,16 @@ func Init(conf *config.Config) error {
 	return nil
 }
 
-func Flush(tree *message.MessageTree) {
-	catInstance.flush(tree)
+func Send(tree *message.MessageTree) {
+	catInstance.send(tree)
 }
 
-func GetNextId(domain string) (string, error) {
-	configDomain := config.GetInstance().GetDomain()
-	if domain != configDomain {
-		return "", fmt.Errorf("cat-agent's domain is %s, not %s", configDomain, domain)
-	}
-
-	return getNextId(), nil
-}
-
-func getNextId() string {
+func GetNextId() string {
 	return catInstance.getNextId()
+}
+
+func GetDomain() string {
+	return config.GetInstance().GetDomain()
 }
 
 func Shutdown() {

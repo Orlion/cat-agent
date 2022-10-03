@@ -11,6 +11,7 @@ const (
 	StatusOk Status = iota
 	StatusMsgReadHeaderErr
 	StatusMsgReadMessageErr
+	StatusBadDomain
 )
 
 const RespHeaderLen = 8
@@ -21,23 +22,34 @@ type response struct {
 	payload []byte
 }
 
-func (c *conn) sendResponse(status Status, payload []byte) error {
+func (c *conn) sendResponse(status Status, payload []byte) (err error) {
 	if c.server.WriteTimeout != 0 {
-		c.rwc.SetWriteDeadline(time.Now().Add(c.server.ReadTimeout))
+		err = c.rwc.SetWriteDeadline(time.Now().Add(c.server.ReadTimeout))
+		if err != nil {
+			return
+		}
 	}
 
-	resp := &response{
-		status:  status,
-		length:  RespHeaderLen + uint32(len(payload)),
-		payload: payload,
+	length := RespHeaderLen + uint32(len(payload))
+	b := make([]byte, length)
+	binary.BigEndian.PutUint32(b, uint32(status))
+	binary.BigEndian.PutUint32(b[4:8], length)
+	copy(b[RespHeaderLen:], payload)
+
+	var n int
+
+	for {
+		n, err = c.rwc.Write(b)
+		if err != nil {
+			return
+		}
+
+		if len(b) <= n {
+			break
+		}
+
+		b = b[n:]
 	}
 
-	b := make([]byte, 0, resp.length)
-	binary.BigEndian.PutUint32(b, uint32(resp.status))
-	binary.BigEndian.PutUint32(b, uint32(resp.length))
-	b = append(b, resp.payload...)
-
-	c.rwc.Write(b)
-
-	return nil
+	return
 }

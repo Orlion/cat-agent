@@ -206,10 +206,11 @@ func (c *Consumer) flush(nonblock bool) {
 		return
 	}
 
+	log.Debugf("tcp sender flush %d trees", len(c.trees))
+
 	c.buf.Reset()
 	b := make([]byte, 4)
 	for _, tree := range c.trees {
-		c.encoder.Reset()
 		c.encoder.EncodeMessageTree(tree)
 
 		binary.BigEndian.PutUint32(b, uint32(c.encoder.BufLen()))

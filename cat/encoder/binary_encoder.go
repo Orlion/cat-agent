@@ -26,11 +26,9 @@ func (e *BinaryEncoder) Bytes() []byte {
 	return e.buf.Bytes()
 }
 
-func (e *BinaryEncoder) Reset() {
-	e.buf.Reset()
-}
-
 func (e *BinaryEncoder) EncodeMessageTree(tree *message.MessageTree) (err error) {
+	e.buf.Reset()
+
 	e.tree = tree
 	if err = e.encodeHeader(); err != nil {
 		return
@@ -47,7 +45,7 @@ func (e *BinaryEncoder) encodeHeader() (err error) {
 	if _, err = e.buf.WriteString(config.BinaryProtocol); err != nil {
 		return
 	}
-	if err = e.writeString(e.tree.GetDomain()); err != nil {
+	if err = e.writeString(config.GetInstance().GetDomain()); err != nil {
 		return
 	}
 	if err = e.writeString(config.GetInstance().GetHostname()); err != nil {
@@ -56,7 +54,6 @@ func (e *BinaryEncoder) encodeHeader() (err error) {
 	if err = e.writeString(config.GetInstance().GetIp()); err != nil {
 		return
 	}
-
 	if err = e.writeString(e.tree.GetThreadGroupName()); err != nil {
 		return
 	}
@@ -66,7 +63,6 @@ func (e *BinaryEncoder) encodeHeader() (err error) {
 	if err = e.writeString(e.tree.GetThreadName()); err != nil {
 		return
 	}
-
 	if err = e.writeString(e.tree.GetMessageId()); err != nil {
 		return
 	}
@@ -132,6 +128,19 @@ func (e *BinaryEncoder) encodeEvent(event *message.Event) (err error) {
 	return e.encodeMessageWithLeader(event, 'E')
 }
 
+func (e *BinaryEncoder) encodeMessageWithLeader(m message.Message, leader rune) (err error) {
+	if _, err = e.buf.WriteRune(leader); err != nil {
+		return
+	}
+	if err = e.encodeMessageStart(m); err != nil {
+		return
+	}
+	if err = e.encodeMessageEnd(m); err != nil {
+		return
+	}
+	return
+}
+
 func (e *BinaryEncoder) encodeMessageStart(m message.Message) (err error) {
 	if err = e.writeI64(m.GetTimestamp()); err != nil {
 		return
@@ -142,6 +151,7 @@ func (e *BinaryEncoder) encodeMessageStart(m message.Message) (err error) {
 	if err = e.writeString(m.GetName()); err != nil {
 		return
 	}
+
 	return
 }
 
@@ -155,25 +165,9 @@ func (e *BinaryEncoder) encodeMessageEnd(m message.Message) (err error) {
 			return
 		}
 	} else {
-		if err = e.writeI64(int64(len(m.GetData()))); err != nil {
+		if err = e.writeString(m.GetData()); err != nil {
 			return
 		}
-		if _, err = e.buf.WriteString(m.GetData()); err != nil {
-			return
-		}
-	}
-	return
-}
-
-func (e *BinaryEncoder) encodeMessageWithLeader(m message.Message, leader rune) (err error) {
-	if _, err = e.buf.WriteRune(leader); err != nil {
-		return
-	}
-	if err = e.encodeMessageStart(m); err != nil {
-		return
-	}
-	if err = e.encodeMessageEnd(m); err != nil {
-		return
 	}
 	return
 }
@@ -191,9 +185,7 @@ func (e *BinaryEncoder) writeString(s string) (err error) {
 func (e *BinaryEncoder) writeI64(i int64) (err error) {
 	for {
 		if i&^0x7F == 0 {
-			if err = e.buf.WriteByte(byte(i)); err != nil {
-				return
-			}
+			err = e.buf.WriteByte(byte(i))
 			return
 		} else {
 			if err = e.buf.WriteByte(byte(i&0x7F | 0x80)); err != nil {

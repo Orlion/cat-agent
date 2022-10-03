@@ -39,24 +39,32 @@ func Init(config *Config) {
 	logger = zap.New(zapcore.NewTee(cores...)).Sugar()
 }
 
+func Debug(args ...interface{}) {
+	logger.Debug(args...)
+}
+
+func Debugf(template string, args ...interface{}) {
+	logger.Debugf(template, args...)
+}
+
 func Info(args ...interface{}) {
-	logger.Info(args)
+	logger.Info(args...)
 }
 
 func Infof(template string, args ...interface{}) {
-	logger.Infof(template, args)
+	logger.Infof(template, args...)
 }
 
 func Warnf(template string, args ...interface{}) {
-	logger.Warnf(template, args)
+	logger.Warnf(template, args...)
 }
 
 func Error(args ...interface{}) {
-	logger.Error(args)
+	logger.Error(args...)
 }
 
 func Errorf(template string, args ...interface{}) {
-	logger.Errorf(template, args)
+	logger.Errorf(template, args...)
 }
 
 func Shutdown() {

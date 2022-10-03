@@ -44,6 +44,7 @@ func main() {
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
 			fmt.Fprintln(os.Stderr, "server listen and serve error: "+err.Error())
+			os.Exit(1)
 		}
 	}()
 
@@ -69,7 +70,7 @@ func waitGracefulStop(srv *server.Server) {
 			srv.Shutdown(ctx)
 			cat.Shutdown()
 			log.Shutdown()
-			time.Sleep(3 * time.Second)
+			time.Sleep(1 * time.Second)
 			return
 		case syscall.SIGHUP:
 		default:

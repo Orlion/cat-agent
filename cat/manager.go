@@ -35,7 +35,7 @@ func (m *Manager) shutdown() {
 	m.sender.Shutdown()
 }
 
-func (m *Manager) flush(tree *message.MessageTree) {
+func (m *Manager) send(tree *message.MessageTree) {
 	if tree.CanDiscard() && m.isHitSample() {
 		m.aggregator.aggregate(tree)
 	} else {
