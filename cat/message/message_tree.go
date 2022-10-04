@@ -12,7 +12,9 @@ type MessageTree struct {
 }
 
 func NewMessageTree() *MessageTree {
-	return &MessageTree{}
+	return &MessageTree{
+		discard: true,
+	}
 }
 
 func (tree *MessageTree) GetMessage() Message {

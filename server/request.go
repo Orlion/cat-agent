@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
 	"time"
 
@@ -49,7 +48,6 @@ func (c *conn) readRequest() (req *Request, err error) {
 		// read body
 		req.Body = make([]byte, req.Length-ReqHeaderLen)
 		_, err = io.ReadFull(c.bufr, req.Body)
-		fmt.Println(req.Body, string(req.Body))
 		if err != nil {
 			return
 		}

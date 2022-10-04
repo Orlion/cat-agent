@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/Orlion/cat-agent/cat"
 	"github.com/Orlion/cat-agent/cat/message"
 	"github.com/Orlion/cat-agent/log"
 	"github.com/Orlion/cat-agent/pkg/dsx"
@@ -17,12 +18,12 @@ var (
 )
 
 const (
-	Tab   = '\t'
-	Lf    = '\n'
-	TypeA = 'A'
-	Typet = 't'
-	TypeT = 'T'
-	TypeE = 'E'
+	Tab   byte = '\t'
+	Lf    byte = '\n'
+	TypeA byte = 'A'
+	Typet byte = 't'
+	TypeT byte = 'T'
+	TypeE byte = 'E'
 )
 
 func SendMessage(req *server.Request) (status server.Status, payload []byte) {
@@ -51,7 +52,7 @@ func SendMessage(req *server.Request) (status server.Status, payload []byte) {
 
 	fmt.Println(r.tree)
 
-	//cat.Send(r.tree)
+	cat.Send(r.tree)
 
 	return
 }
@@ -65,21 +66,17 @@ type messageTreeReader struct {
 }
 
 func (r *messageTreeReader) readHeader() error {
-	fmt.Println(111111, r.i)
 	domain, err := r.readElement()
 	if err != nil {
 		return err
 	}
 
 	r.domain = string(domain)
-	fmt.Println(222222, r.i)
 	threadGroupName, err := r.readElement()
-	fmt.Println(threadGroupName, err, string(threadGroupName))
 	if err != nil {
 		return err
 	}
 	r.tree.SetThreadGroupName(string(threadGroupName))
-	fmt.Println(333333, r.i)
 	threadId, err := r.readElement()
 	if err != nil {
 		return err
@@ -115,16 +112,18 @@ func (r *messageTreeReader) readHeader() error {
 
 func (r *messageTreeReader) readMessage() (err error) {
 	var (
+		root  message.Message
 		msg   message.Message
 		stack = dsx.NewTransactionStack()
+		t     byte
 	)
 
-	t, root, err := r.readMessageLine()
-	if err != nil && err != errBodyEnd {
-		return
-	}
-
+Loop:
 	for {
+		t, msg, err = r.readMessageLine()
+		if err != nil {
+			break Loop
+		}
 		switch t {
 		case Typet:
 			if trans := stack.Peek(); trans != nil {
@@ -134,24 +133,20 @@ func (r *messageTreeReader) readMessage() (err error) {
 		case TypeT:
 			if trans := stack.Pop(); trans == nil {
 				err = errors.New("transaction are not a pair")
-				break
+				break Loop
+			} else if trans.GetType() != msg.GetType() || trans.GetName() != msg.GetName() {
+				err = errors.New("transaction are not a pair")
+				break Loop
+			} else {
+				root = trans
 			}
 		case TypeA:
-			if trans := stack.Peek(); trans != nil {
-				stack.Peek().AddChild(msg)
-			}
+			fallthrough
 		case TypeE:
 			if trans := stack.Peek(); trans != nil {
 				stack.Peek().AddChild(msg)
 			}
-		}
-
-		t, msg, err = r.readMessageLine()
-		if err == errBodyEnd {
-			continue
-		}
-		if err != nil {
-			break
+			root = msg
 		}
 	}
 
@@ -178,17 +173,6 @@ func (r *messageTreeReader) readMessageLine() (t byte, msg message.Message, err 
 
 	t = tBytes[0]
 
-	if t == TypeT {
-		return
-	}
-
-	timestampInMillis, err := r.readElement()
-	if err != nil {
-		return
-	}
-
-	timestampInMillisInt64, _ := strconv.ParseInt(string(timestampInMillis), 10, 64)
-
 	mtype, err := r.readElement()
 	if err != nil {
 		return
@@ -204,6 +188,13 @@ func (r *messageTreeReader) readMessageLine() (t byte, msg message.Message, err 
 		return
 	}
 
+	timestampInMillis, err := r.readElement()
+	if err != nil {
+		return
+	}
+
+	timestampInMillisInt64, _ := strconv.ParseInt(string(timestampInMillis), 10, 64)
+
 	rawDurationInMicros, err := r.readElement()
 	if err != nil {
 		return
@@ -216,6 +207,9 @@ func (r *messageTreeReader) readMessageLine() (t byte, msg message.Message, err 
 
 	switch t {
 	case Typet:
+		fallthrough
+	case TypeT:
+		fallthrough
 	case TypeA:
 		rawDurationInMicrosInt64, _ := strconv.ParseInt(string(rawDurationInMicros), 10, 64)
 		msg = message.NewTransaction(string(mtype), string(name), string(status), string(data), timestampInMillisInt64, nil, rawDurationInMicrosInt64)
