@@ -114,7 +114,7 @@ func (srv *Server) serve(ln net.Listener) error {
 }
 
 func (srv *Server) Shutdown(ctx context.Context) error {
-	log.Info("server shutdown")
+	log.Info("server shutdown...")
 
 	srv.inShutdown.SetTrue()
 

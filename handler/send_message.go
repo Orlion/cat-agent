@@ -50,8 +50,6 @@ func SendMessage(req *server.Request) (status server.Status, payload []byte) {
 		return
 	}
 
-	fmt.Println(r.tree)
-
 	cat.Send(r.tree)
 
 	return
@@ -93,7 +91,11 @@ func (r *messageTreeReader) readHeader() error {
 	if err != nil {
 		return err
 	}
-	r.tree.SetMessageId(string(messageId))
+	if len(messageId) > 0 {
+		r.tree.SetMessageId(string(messageId))
+	} else {
+		r.tree.SetMessageId(cat.GetNextId())
+	}
 
 	parentMessageId, err := r.readElement()
 	if err != nil {
@@ -147,6 +149,9 @@ Loop:
 				stack.Peek().AddChild(msg)
 			}
 			root = msg
+		}
+		if msg.GetStatus() != message.SUCCESS {
+			r.tree.SetDiscard(false)
 		}
 	}
 

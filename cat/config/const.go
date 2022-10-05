@@ -27,7 +27,7 @@ const (
 
 	TcpSenderNormalQueueConsumerNum      = 10
 	TcpSenderHighQueueConsumerNum        = 10
-	TcpSenderQueueConsumerTickerDuration = 100 * time.Millisecond
+	TcpSenderQueueConsumerTickerDuration = 1000 * time.Millisecond
 	TcpSenderQueueConsumerBufSize        = 150
 
 	EventAggregatorTickerDuration       = 3 * time.Second
@@ -35,7 +35,7 @@ const (
 	EventAggregatorChannelSize          = 1000
 	TransactionAggregatorChannelSize    = 1000
 
-	RouterUpdateDuration = 30 * time.Second
+	RouterUpdateDuration = 60 * time.Second
 
 	BinaryProtocol = "NT1"
 )

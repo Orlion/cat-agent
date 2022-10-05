@@ -1,13 +1,13 @@
 package cat
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/Orlion/cat-agent/cat/config"
 	"github.com/Orlion/cat-agent/cat/message"
 	"github.com/Orlion/cat-agent/log"
-	"github.com/Orlion/cat-agent/pkg/atomicx"
 )
 
 type eventData struct {
@@ -23,60 +23,47 @@ func (ed *eventData) add(event *message.Event) {
 }
 
 type EventAggregator struct {
-	datas      map[string]*eventData
-	ch         chan *message.Event
-	inShutdown atomicx.Bool
-	done       chan struct{}
+	datas map[string]*eventData
+	ch    chan *message.Event
 }
 
 func newEventAggregator() *EventAggregator {
 	return &EventAggregator{
 		datas: make(map[string]*eventData),
 		ch:    make(chan *message.Event, config.EventAggregatorChannelSize),
-		done:  make(chan struct{}),
 	}
 }
 
-func (ea *EventAggregator) run() {
+func (ea *EventAggregator) run(ctx context.Context) {
 	log.Info("event aggregator running...")
-	go func() {
-		ticker := time.NewTicker(config.EventAggregatorTickerDuration)
+	ticker := time.NewTicker(config.EventAggregatorTickerDuration)
 
-		for !ea.inShutdown.Get() {
-			select {
-			case event := <-ea.ch:
-				ea.getOrDefault(event).add(event)
-			case <-ticker.C:
-				ea.flush()
-			}
-		}
-
-		ticker.Stop()
-
-		close(ea.ch)
-
-		for event := range ea.ch {
+Loop:
+	for {
+		select {
+		case event := <-ea.ch:
 			ea.getOrDefault(event).add(event)
+		case <-ticker.C:
+			ea.flush()
+		case <-ctx.Done():
+			break Loop
 		}
+	}
 
-		ea.flush()
+	ticker.Stop()
 
-		close(ea.done)
-	}()
-}
+	close(ea.ch)
 
-func (ea *EventAggregator) shutdown() {
-	log.Info("event aggregator shutdown...")
-	ea.inShutdown.SetTrue()
-	<-ea.done
+	for event := range ea.ch {
+		ea.getOrDefault(event).add(event)
+	}
+
+	ea.flush()
+
 	log.Info("event aggregator exit")
 }
 
 func (ea *EventAggregator) logEvent(event *message.Event) {
-	if ea.inShutdown.Get() {
-		return
-	}
-
 	select {
 	case ea.ch <- event:
 	default:

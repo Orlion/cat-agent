@@ -117,7 +117,7 @@ func (e *BinaryEncoder) encodeTransaction(trans *message.Transaction) (err error
 		return
 	}
 
-	if err = e.writeI64(trans.GetRawDurationInMicros()); err != nil {
+	if err = e.writeI64(trans.GetDurationInMicros()); err != nil {
 		return
 	}
 

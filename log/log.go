@@ -68,6 +68,6 @@ func Errorf(template string, args ...interface{}) {
 }
 
 func Shutdown() {
-	logger.Info("log shutdown")
+	logger.Info("log shutdown...")
 	logger.Sync()
 }

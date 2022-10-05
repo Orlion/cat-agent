@@ -31,7 +31,7 @@ func (cat *Cat) shuttingDown() bool {
 }
 
 func (cat *Cat) send(tree *message.MessageTree) {
-	if cat.shuttingDown() {
+	if cat.shuttingDown() || !config.GetInstance().IsEnabled() {
 		return
 	}
 

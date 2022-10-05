@@ -41,8 +41,9 @@ func newConfigService(config *Config) (*ConfigService, error) {
 
 	c := &ConfigService{
 		config: config,
-		wg:     new(sync.WaitGroup),
 		done:   make(chan struct{}),
+		wg:     new(sync.WaitGroup),
+		enable: 1,
 	}
 	c.mu = sync.RWMutex{}
 	c.routersCond = sync.NewCond(&c.mu)

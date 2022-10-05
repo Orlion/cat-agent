@@ -2,6 +2,7 @@ package cat
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strconv"
 	"time"
@@ -9,7 +10,6 @@ import (
 	"github.com/Orlion/cat-agent/cat/config"
 	"github.com/Orlion/cat-agent/cat/message"
 	"github.com/Orlion/cat-agent/log"
-	"github.com/Orlion/cat-agent/pkg/atomicx"
 )
 
 type transactionData struct {
@@ -26,7 +26,7 @@ func (td *transactionData) add(transaction *message.Transaction) {
 		td.fail++
 	}
 
-	millis := transaction.GetRawDurationInMicros() / 1000
+	millis := transaction.GetDurationInMicros() / 1000
 	td.sum += millis
 
 	duration := computeDuration(int(millis))
@@ -64,60 +64,46 @@ func (td *transactionData) encode() string {
 }
 
 type TransactionAggregator struct {
-	datas      map[string]*transactionData
-	ch         chan *message.Transaction
-	inShutdown atomicx.Bool
-	done       chan struct{}
+	datas map[string]*transactionData
+	ch    chan *message.Transaction
 }
 
 func newTransactionAggregator() *TransactionAggregator {
 	return &TransactionAggregator{
 		datas: make(map[string]*transactionData),
 		ch:    make(chan *message.Transaction, config.TransactionAggregatorChannelSize),
-		done:  make(chan struct{}),
 	}
 }
 
-func (ta *TransactionAggregator) run() {
+func (ta *TransactionAggregator) run(ctx context.Context) {
 	log.Info("transaction aggregator running...")
-	go func() {
-		ticker := time.NewTicker(config.TransactionAggregatorTickerDuration)
+	ticker := time.NewTicker(config.TransactionAggregatorTickerDuration)
 
-		for !ta.inShutdown.Get() {
-			select {
-			case transaction := <-ta.ch:
-				ta.getOrDefault(transaction).add(transaction)
-			case <-ticker.C:
-				ta.flush()
-			}
-		}
-
-		ticker.Stop()
-
-		close(ta.ch)
-
-		for transaction := range ta.ch {
+Loop:
+	for {
+		select {
+		case transaction := <-ta.ch:
 			ta.getOrDefault(transaction).add(transaction)
+		case <-ticker.C:
+			ta.flush()
+		case <-ctx.Done():
+			break Loop
 		}
+	}
 
-		ta.flush()
+	ticker.Stop()
 
-		close(ta.done)
-	}()
-}
+	close(ta.ch)
 
-func (ta *TransactionAggregator) shutdown() {
-	log.Info("transaction aggregator shutdown...")
-	ta.inShutdown.SetTrue()
-	<-ta.done
+	for transaction := range ta.ch {
+		ta.getOrDefault(transaction).add(transaction)
+	}
+
+	ta.flush()
 	log.Info("transaction aggregator exit")
 }
 
 func (ta *TransactionAggregator) logTransaction(transaction *message.Transaction) {
-	if ta.inShutdown.Get() {
-		return
-	}
-
 	select {
 	case ta.ch <- transaction:
 	default:

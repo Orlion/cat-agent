@@ -1,30 +1,54 @@
 package cat
 
-import "github.com/Orlion/cat-agent/cat/message"
+import (
+	"context"
+	"sync"
+
+	"github.com/Orlion/cat-agent/cat/message"
+	"github.com/Orlion/cat-agent/pkg/atomicx"
+)
 
 type LocalAggregator struct {
-	ta *TransactionAggregator
-	ea *EventAggregator
+	ta         *TransactionAggregator
+	ea         *EventAggregator
+	cancel     func()
+	wg         *sync.WaitGroup
+	inShutdown atomicx.Bool
 }
 
 func newLocalAggregator() *LocalAggregator {
 	return &LocalAggregator{
 		ta: newTransactionAggregator(),
 		ea: newEventAggregator(),
+		wg: new(sync.WaitGroup),
 	}
 }
 
 func (la *LocalAggregator) run() {
-	la.ea.run()
-	la.ta.run()
+	var ctx context.Context
+	ctx, la.cancel = context.WithCancel(context.Background())
+	la.wg.Add(2)
+	go func() {
+		la.ea.run(ctx)
+		la.wg.Done()
+	}()
+	go func() {
+		la.ta.run(ctx)
+		la.wg.Done()
+	}()
 }
 
 func (la *LocalAggregator) shutdown() {
-	la.ea.shutdown()
-	la.ta.shutdown()
+	la.inShutdown.SetTrue()
+	la.cancel()
+	la.wg.Wait()
 }
 
 func (la *LocalAggregator) aggregate(tree *message.MessageTree) {
+	if la.inShutdown.Get() {
+		return
+	}
+
 	msg := tree.GetMessage()
 	switch msg.(type) {
 	case *message.Transaction:
