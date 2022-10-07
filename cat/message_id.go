@@ -1,7 +1,9 @@
 package cat
 
 import (
-	"fmt"
+	"bytes"
+	"strconv"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -9,21 +11,69 @@ import (
 )
 
 type MessageIdFactory struct {
-	index uint32
-	hour  int
+	mu     sync.RWMutex
+	indexs map[string]uint32
+	hour   int
 }
 
 func newMessageIdFactory() *MessageIdFactory {
 	return &MessageIdFactory{}
 }
 
-func (f *MessageIdFactory) getNextId() string {
-	hour := int(time.Now().Unix() / 3600)
-	if hour != f.hour {
-		f.hour = hour
-		currentIndex := atomic.LoadUint32(&f.index)
-		atomic.CompareAndSwapUint32(&f.index, currentIndex, 0)
+func (f *MessageIdFactory) getNextId(domain string) (messgaeId []byte) {
+	buf := new(bytes.Buffer)
+
+	f.mu.RLock()
+	if index, exists := f.indexs[domain]; !exists {
+		buf.WriteString(domain)
+		buf.WriteByte('-')
+		buf.WriteString(config.GetInstance().GetIpHex())
+		buf.WriteByte('-')
+		buf.WriteString(strconv.Itoa(f.hour))
+		buf.WriteByte('-')
+		buf.WriteString(strconv.Itoa(int(atomic.AddUint32(&index, 1))))
+		f.mu.RUnlock()
+	} else {
+		f.mu.RUnlock()
+		f.mu.Lock()
+		buf.WriteString(domain)
+		buf.WriteByte('-')
+		buf.WriteString(config.GetInstance().GetIpHex())
+		buf.WriteByte('-')
+		buf.WriteString(strconv.Itoa(f.hour))
+		buf.Write([]byte{'-', '1'})
+		f.indexs[domain] = 2
+		f.mu.Unlock()
 	}
 
-	return fmt.Sprintf("%s-%s-%d-%d", config.GetInstance().GetDomain(), config.GetInstance().GetIpHex(), hour, atomic.AddUint32(&f.index, 1))
+	return
+}
+
+func (f *MessageIdFactory) run() {
+	now := time.Now()
+
+	f.mu.Lock()
+	f.hour = now.Hour()
+	f.mu.Unlock()
+
+	next := now.Add(time.Hour)
+	next = time.Date(next.Year(), next.Month(), next.Day(), next.Hour(), 0, 0, 0, next.Location())
+	timer := time.NewTimer(next.Sub(now))
+	go func() {
+		for {
+			<-timer.C
+
+			now = time.Now()
+			next = now.Add(time.Hour)
+			next = time.Date(next.Year(), next.Month(), next.Day(), next.Hour(), 0, 0, 0, next.Location())
+			timer.Reset(next.Sub(now))
+
+			f.mu.Lock()
+			f.hour = now.Hour()
+			for domain := range f.indexs {
+				f.indexs[domain] = 0
+			}
+			f.mu.Unlock()
+		}
+	}()
 }

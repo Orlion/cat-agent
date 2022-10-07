@@ -18,10 +18,6 @@ const (
 	BatchFlag  = '@'
 	BatchSplit = ';'
 
-	ThreadIdCatAgent        = "0"
-	ThreadNameCatAgent      = "cat-agent"
-	ThreadGroupNameCatAgent = "cat-agent-group"
-
 	TcpSenderHighQueueSize   = 50000
 	TcpSenderNormalQueueSize = 50000
 
@@ -36,6 +32,11 @@ const (
 	TransactionAggregatorChannelSize    = 1000
 
 	RouterUpdateDuration = 60 * time.Second
+)
 
-	BinaryProtocol = "NT1"
+var (
+	BinaryProtocol          = []byte("NT1")
+	ThreadIdCatAgent        = []byte("0")
+	ThreadNameCatAgent      = []byte("cat-agent")
+	ThreadGroupNameCatAgent = []byte("cat-agent-group")
 )

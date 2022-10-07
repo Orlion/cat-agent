@@ -15,6 +15,7 @@ type Cat struct {
 }
 
 func (cat *Cat) run() {
+	cat.msgIdFactory.run()
 	cat.manager.run()
 }
 
@@ -38,8 +39,8 @@ func (cat *Cat) send(tree *message.MessageTree) {
 	cat.manager.send(tree)
 }
 
-func (cat *Cat) getNextId() string {
-	return cat.msgIdFactory.getNextId()
+func (cat *Cat) getNextId(domain string) []byte {
+	return cat.msgIdFactory.getNextId(domain)
 }
 
 func Init(conf *config.Config) error {
@@ -61,8 +62,8 @@ func Send(tree *message.MessageTree) {
 	catInstance.send(tree)
 }
 
-func GetNextId() string {
-	return catInstance.getNextId()
+func GetNextId(domain string) []byte {
+	return catInstance.getNextId(domain)
 }
 
 func Shutdown() {

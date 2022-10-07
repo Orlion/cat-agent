@@ -2,12 +2,13 @@ package message
 
 type MessageTree struct {
 	message         Message
-	messageId       string
-	parentMessageId string
-	rootMessageId   string
-	threadGroupName string
-	threadId        string
-	threadName      string
+	domain          []byte
+	messageId       []byte
+	parentMessageId []byte
+	rootMessageId   []byte
+	threadGroupName []byte
+	threadId        []byte
+	threadName      []byte
 	discard         bool
 }
 
@@ -21,27 +22,31 @@ func (tree *MessageTree) GetMessage() Message {
 	return tree.message
 }
 
-func (tree *MessageTree) GetMessageId() string {
+func (tree *MessageTree) GetDomain() []byte {
+	return tree.domain
+}
+
+func (tree *MessageTree) GetMessageId() []byte {
 	return tree.messageId
 }
 
-func (tree *MessageTree) GetParentMessageId() string {
+func (tree *MessageTree) GetParentMessageId() []byte {
 	return tree.parentMessageId
 }
 
-func (tree *MessageTree) GetRootMessageId() string {
+func (tree *MessageTree) GetRootMessageId() []byte {
 	return tree.rootMessageId
 }
 
-func (tree *MessageTree) GetThreadGroupName() string {
+func (tree *MessageTree) GetThreadGroupName() []byte {
 	return tree.threadGroupName
 }
 
-func (tree *MessageTree) GetThreadId() string {
+func (tree *MessageTree) GetThreadId() []byte {
 	return tree.threadId
 }
 
-func (tree *MessageTree) GetThreadName() string {
+func (tree *MessageTree) GetThreadName() []byte {
 	return tree.threadName
 }
 
@@ -53,27 +58,31 @@ func (tree *MessageTree) SetMessage(message Message) {
 	tree.message = message
 }
 
-func (tree *MessageTree) SetMessageId(messageId string) {
+func (tree *MessageTree) SetDomain(domain []byte) {
+	tree.domain = domain
+}
+
+func (tree *MessageTree) SetMessageId(messageId []byte) {
 	tree.messageId = messageId
 }
 
-func (tree *MessageTree) SetParentMessageId(parentMessageId string) {
+func (tree *MessageTree) SetParentMessageId(parentMessageId []byte) {
 	tree.parentMessageId = parentMessageId
 }
 
-func (tree *MessageTree) SetRootMessageId(rootMessageId string) {
+func (tree *MessageTree) SetRootMessageId(rootMessageId []byte) {
 	tree.rootMessageId = rootMessageId
 }
 
-func (tree *MessageTree) SetThreadGroupName(threadGroupName string) {
+func (tree *MessageTree) SetThreadGroupName(threadGroupName []byte) {
 	tree.threadGroupName = threadGroupName
 }
 
-func (tree *MessageTree) SetThreadId(threadId string) {
+func (tree *MessageTree) SetThreadId(threadId []byte) {
 	tree.threadId = threadId
 }
 
-func (tree *MessageTree) SetThreadName(threadName string) {
+func (tree *MessageTree) SetThreadName(threadName []byte) {
 	tree.threadName = threadName
 }
 

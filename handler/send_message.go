@@ -41,7 +41,7 @@ func SendMessage(req *server.Request) (status server.Status, payload []byte) {
 		return
 	}
 
-	log.Debugf("read header, domain: %s, threadGroupName: %s, threadId: %s, threadName: %s, messageId: %s, parentMessageId: %s, rootMessageId: %s", r.domain, r.tree.GetThreadGroupName(), r.tree.GetThreadId(), r.tree.GetThreadName(), r.tree.GetMessageId(), r.tree.GetParentMessageId(), r.tree.GetRootMessageId())
+	log.Debugf("read header, domain: %s, threadGroupName: %s, threadId: %s, threadName: %s, messageId: %s, parentMessageId: %s, rootMessageId: %s", r.tree.GetDomain(), r.tree.GetThreadGroupName(), r.tree.GetThreadId(), r.tree.GetThreadName(), r.tree.GetMessageId(), r.tree.GetParentMessageId(), r.tree.GetRootMessageId())
 
 	err = r.readMessage()
 	if err != nil {
@@ -56,11 +56,10 @@ func SendMessage(req *server.Request) (status server.Status, payload []byte) {
 }
 
 type messageTreeReader struct {
-	i      int
-	len    int
-	body   []byte
-	domain string
-	tree   *message.MessageTree
+	i    int
+	len  int
+	body []byte
+	tree *message.MessageTree
 }
 
 func (r *messageTreeReader) readHeader() error {
@@ -68,46 +67,46 @@ func (r *messageTreeReader) readHeader() error {
 	if err != nil {
 		return err
 	}
+	r.tree.SetDomain(domain)
 
-	r.domain = string(domain)
 	threadGroupName, err := r.readElement()
 	if err != nil {
 		return err
 	}
-	r.tree.SetThreadGroupName(string(threadGroupName))
+	r.tree.SetThreadGroupName(threadGroupName)
 	threadId, err := r.readElement()
 	if err != nil {
 		return err
 	}
-	r.tree.SetThreadId(string(threadId))
+	r.tree.SetThreadId(threadId)
 
 	threadName, err := r.readElement()
 	if err != nil {
 		return err
 	}
-	r.tree.SetThreadName(string(threadName))
+	r.tree.SetThreadName(threadName)
 
 	messageId, err := r.readElement()
 	if err != nil {
 		return err
 	}
 	if len(messageId) > 0 {
-		r.tree.SetMessageId(string(messageId))
+		r.tree.SetMessageId(messageId)
 	} else {
-		r.tree.SetMessageId(cat.GetNextId())
+		r.tree.SetMessageId(cat.GetNextId(string(domain)))
 	}
 
 	parentMessageId, err := r.readElement()
 	if err != nil {
 		return err
 	}
-	r.tree.SetParentMessageId(string(parentMessageId))
+	r.tree.SetParentMessageId(parentMessageId)
 
 	rootMessageId, err := r.readElement()
 	if err == errBodyEnd {
 		err = nil
 	}
-	r.tree.SetRootMessageId(string(rootMessageId))
+	r.tree.SetRootMessageId(rootMessageId)
 
 	return nil
 }

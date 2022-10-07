@@ -42,10 +42,10 @@ func (e *BinaryEncoder) EncodeMessageTree(tree *message.MessageTree) (err error)
 }
 
 func (e *BinaryEncoder) encodeHeader() (err error) {
-	if _, err = e.buf.WriteString(config.BinaryProtocol); err != nil {
+	if _, err = e.buf.Write(config.BinaryProtocol); err != nil {
 		return
 	}
-	if err = e.writeString(config.GetInstance().GetDomain()); err != nil {
+	if err = e.writeBytes(e.tree.GetDomain()); err != nil {
 		return
 	}
 	if err = e.writeString(config.GetInstance().GetHostname()); err != nil {
@@ -54,22 +54,22 @@ func (e *BinaryEncoder) encodeHeader() (err error) {
 	if err = e.writeString(config.GetInstance().GetIp()); err != nil {
 		return
 	}
-	if err = e.writeString(e.tree.GetThreadGroupName()); err != nil {
+	if err = e.writeBytes(e.tree.GetThreadGroupName()); err != nil {
 		return
 	}
-	if err = e.writeString(e.tree.GetThreadId()); err != nil {
+	if err = e.writeBytes(e.tree.GetThreadId()); err != nil {
 		return
 	}
-	if err = e.writeString(e.tree.GetThreadName()); err != nil {
+	if err = e.writeBytes(e.tree.GetThreadName()); err != nil {
 		return
 	}
-	if err = e.writeString(e.tree.GetMessageId()); err != nil {
+	if err = e.writeBytes(e.tree.GetMessageId()); err != nil {
 		return
 	}
-	if err = e.writeString(e.tree.GetParentMessageId()); err != nil {
+	if err = e.writeBytes(e.tree.GetParentMessageId()); err != nil {
 		return
 	}
-	if err = e.writeString(e.tree.GetRootMessageId()); err != nil {
+	if err = e.writeBytes(e.tree.GetRootMessageId()); err != nil {
 		return
 	}
 
@@ -177,6 +177,16 @@ func (e *BinaryEncoder) writeString(s string) (err error) {
 		return
 	}
 	if _, err = e.buf.WriteString(s); err != nil {
+		return
+	}
+	return
+}
+
+func (e *BinaryEncoder) writeBytes(b []byte) (err error) {
+	if err = e.writeI64(int64(len(b))); err != nil {
+		return
+	}
+	if _, err = e.buf.Write(b); err != nil {
 		return
 	}
 	return

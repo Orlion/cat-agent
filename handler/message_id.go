@@ -6,6 +6,12 @@ import (
 )
 
 func CreateMessageId(req *server.Request) (status server.Status, payload []byte) {
-	payload = []byte(cat.GetNextId())
+	if len(req.Body) < 1 {
+		status = server.StatusBadDomain
+		return
+	}
+
+	payload = []byte(cat.GetNextId(string(req.Body)))
+
 	return
 }

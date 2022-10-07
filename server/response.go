@@ -12,6 +12,7 @@ const (
 	StatusMsgReadHeaderErr
 	StatusMsgReadMessageErr
 	StatusNotFoundCmd
+	StatusBadDomain
 )
 
 const RespHeaderLen = 8

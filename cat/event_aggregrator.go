@@ -22,15 +22,20 @@ func (ed *eventData) add(event *message.Event) {
 	}
 }
 
+type eventWithDomain struct {
+	domain string
+	event  *message.Event
+}
+
 type EventAggregator struct {
-	datas map[string]*eventData
-	ch    chan *message.Event
+	datas map[string]map[string]*eventData
+	ch    chan *eventWithDomain
 }
 
 func newEventAggregator() *EventAggregator {
 	return &EventAggregator{
-		datas: make(map[string]*eventData),
-		ch:    make(chan *message.Event, config.EventAggregatorChannelSize),
+		datas: make(map[string]map[string]*eventData),
+		ch:    make(chan *eventWithDomain, config.EventAggregatorChannelSize),
 	}
 }
 
@@ -41,8 +46,8 @@ func (ea *EventAggregator) run(ctx context.Context) {
 Loop:
 	for {
 		select {
-		case event := <-ea.ch:
-			ea.getOrDefault(event).add(event)
+		case eventWithDomain := <-ea.ch:
+			ea.getOrDefault(eventWithDomain.domain, eventWithDomain.event).add(eventWithDomain.event)
 		case <-ticker.C:
 			ea.flush()
 		case <-ctx.Done():
@@ -71,7 +76,7 @@ func (ea *EventAggregator) logEvent(event *message.Event) {
 	}
 }
 
-func (ea *EventAggregator) getOrDefault(event *message.Event) *eventData {
+func (ea *EventAggregator) getOrDefault(domain string, event *message.Event) *eventData {
 	key := fmt.Sprintf("%s,%s", event.GetType(), event.GetName())
 
 	data, exists := ea.datas[key]
@@ -100,9 +105,7 @@ func (ea *EventAggregator) flush() {
 
 	tree := message.NewMessageTree()
 	tree.SetMessage(trans)
-	tree.SetMessageId(GetNextId())
-	tree.SetParentMessageId("")
-	tree.SetRootMessageId("")
+	tree.SetMessageId(GetNextId("todo"))
 	tree.SetThreadGroupName(config.ThreadGroupNameCatAgent)
 	tree.SetThreadId(config.ThreadIdCatAgent)
 	tree.SetThreadName(config.ThreadNameCatAgent)

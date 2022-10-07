@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/Orlion/cat-agent/cat/config"
-	"github.com/Orlion/cat-agent/cat/message"
 	"github.com/Orlion/cat-agent/log"
 	"go.uber.org/zap/zapcore"
 )
@@ -42,30 +41,11 @@ func TestGetNextId(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
 		go func() {
-			messageId := GetNextId()
+			messageId := GetNextId("default")
 			t.Log(messageId)
 			wg.Done()
 		}()
 	}
 	wg.Wait()
 	t.Log("test GetNextId end")
-}
-
-func TestSend(t *testing.T) {
-	t.Log("test Send begin")
-
-	event := message.NewEvent("cat-test-event-type", "cat-test-event-name", message.SUCCESS, "cat-test-data", 100)
-
-	tree := message.NewMessageTree()
-	tree.SetThreadGroupName(config.ThreadGroupNameCatAgent)
-	tree.SetThreadId(config.ThreadIdCatAgent)
-	tree.SetThreadName(config.ThreadNameCatAgent)
-	tree.SetMessageId(GetNextId())
-	tree.SetParentMessageId("")
-	tree.SetRootMessageId("")
-	tree.SetMessage(event)
-	tree.SetDiscard(false)
-	Send(tree)
-	Shutdown()
-	t.Log("test Send end")
 }

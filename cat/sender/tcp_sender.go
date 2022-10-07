@@ -212,7 +212,6 @@ func (c *Consumer) flush(nonblock bool) {
 	b := make([]byte, 4)
 	for _, tree := range c.trees {
 		c.encoder.EncodeMessageTree(tree)
-
 		binary.BigEndian.PutUint32(b, uint32(c.encoder.BufLen()))
 		c.buf.Write(b)
 		c.buf.Write(c.encoder.Bytes())
