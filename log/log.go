@@ -3,9 +3,9 @@ package log
 import (
 	"os"
 
-	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var logger *zap.SugaredLogger
@@ -18,12 +18,21 @@ func Init(config *Config) {
 	encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	encoder := zapcore.NewConsoleEncoder(encoderConfig)
 
-	cores := make([]zapcore.Core, 1)
-	cores[0] = zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), zap.DebugLevel)
+	level, err := zapcore.ParseLevel(config.StdoutLevel)
+	if err != nil {
+		level = zapcore.InfoLevel
+	}
 
+	cores := make([]zapcore.Core, 1)
+	cores[0] = zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), level)
+
+	level, err = zapcore.ParseLevel(config.StdoutLevel)
+	if err != nil {
+		level = zapcore.ErrorLevel
+	}
 	if config.Filename != "" {
 		priority := zap.LevelEnablerFunc(func(lev zapcore.Level) bool {
-			return lev >= config.Level
+			return lev >= level
 		})
 		infoFileWriteSyncer := zapcore.AddSync(&lumberjack.Logger{
 			Filename:   config.Filename,

@@ -93,7 +93,7 @@ func (r *messageTreeReader) readHeader() error {
 	if len(messageId) > 0 {
 		r.tree.SetMessageId(messageId)
 	} else {
-		r.tree.SetMessageId(cat.GetNextId(string(domain)))
+		r.tree.SetMessageId(cat.CreateMessageId(string(domain)))
 	}
 
 	parentMessageId, err := r.readElement()

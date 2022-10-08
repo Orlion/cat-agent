@@ -24,7 +24,7 @@ func (c *conn) serve() {
 
 		req, err := c.readRequest()
 		if err != nil {
-			log.Errorf("conn read request error: %s", err)
+			log.Infof("conn read request error: %s", err)
 			return
 		}
 

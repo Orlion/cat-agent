@@ -119,8 +119,7 @@ func (ta *TransactionAggregator) logTransaction(domain string, transaction *mess
 func (ta *TransactionAggregator) getOrDefault(domain string, transaction *message.Transaction) (data *transactionData) {
 	key := fmt.Sprintf("%s,%s", transaction.GetType(), transaction.GetName())
 
-	domainData, exists := ta.datas[domain]
-	if exists {
+	if domainData, exists := ta.datas[domain]; exists {
 		data, exists = domainData[key]
 		if !exists {
 			data = &transactionData{
@@ -155,17 +154,17 @@ func (ta *TransactionAggregator) flush() {
 		return
 	}
 
-	for domain, datas := range ta.datas {
+	for domain, domainDatas := range ta.datas {
 		trans := message.NewTransaction(config.TypeSystem, config.NameTransactionAggregator, message.SUCCESS, "", 0, nil, 0)
 
-		for _, data := range datas {
+		for _, data := range domainDatas {
 			trans := message.NewTransaction(data.t, data.name, message.SUCCESS, data.encode(), 0, nil, 0)
 			trans.AddChild(trans)
 		}
 
 		tree := message.NewMessageTree()
 		tree.SetMessage(trans)
-		tree.SetMessageId(GetNextId(domain))
+		tree.SetMessageId(CreateMessageId(domain))
 		tree.SetThreadGroupName(config.ThreadGroupNameCatAgent)
 		tree.SetThreadId(config.ThreadIdCatAgent)
 		tree.SetThreadName(config.ThreadNameCatAgent)

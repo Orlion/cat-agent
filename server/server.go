@@ -52,7 +52,7 @@ func (srv *Server) Handle(cmd Cmd, handler Handler) {
 	srv.handlers[cmd] = handler
 }
 
-func (srv *Server) ListenAndServe() error {
+func (srv *Server) ListenAndServe() (err error) {
 	network := "tcp"
 
 	if strings.HasPrefix(srv.Addr, "unix:") {
@@ -60,25 +60,23 @@ func (srv *Server) ListenAndServe() error {
 		network = "unix"
 	}
 
-	ln, err := net.Listen(network, srv.Addr)
+	srv.listener, err = net.Listen(network, srv.Addr)
 	if err != nil {
 		return err
 	}
 
-	go srv.serve(ln)
+	go srv.serve()
 
 	return nil
 }
 
-func (srv *Server) serve(ln net.Listener) error {
+func (srv *Server) serve() error {
 	log.Infof("server listen on %s...", srv.Addr)
 
 	var tempDelay time.Duration // how long to sleep on accept failure
 
-	srv.listener = ln
-
 	for {
-		rw, err := ln.Accept()
+		rw, err := srv.listener.Accept()
 		if err != nil {
 			select {
 			case <-srv.getDoneChan():

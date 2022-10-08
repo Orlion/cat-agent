@@ -11,7 +11,7 @@ func CreateMessageId(req *server.Request) (status server.Status, payload []byte)
 		return
 	}
 
-	payload = []byte(cat.GetNextId(string(req.Body)))
+	payload = []byte(cat.CreateMessageId(string(req.Body)))
 
 	return
 }

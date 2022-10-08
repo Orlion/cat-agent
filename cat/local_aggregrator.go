@@ -49,25 +49,26 @@ func (la *LocalAggregator) aggregate(tree *message.MessageTree) {
 		return
 	}
 
+	domain := string(tree.GetDomain())
+
 	msg := tree.GetMessage()
 	switch msg.(type) {
 	case *message.Transaction:
-		la.analyzerProcessTransaction(tree.GetDomain(), msg.(*message.Transaction))
+		la.analyzerProcessTransaction(domain, msg.(*message.Transaction))
 	case *message.Event:
-		la.ea.logEvent(msg.(*message.Event))
+		la.ea.logEvent(domain, msg.(*message.Event))
 	default:
 	}
 }
 
-func (la *LocalAggregator) analyzerProcessTransaction(domain []byte, transaction *message.Transaction) {
+func (la *LocalAggregator) analyzerProcessTransaction(domain string, transaction *message.Transaction) {
 	la.ta.logTransaction(domain, transaction)
-
 	for _, child := range transaction.GetChildren() {
 		switch child.(type) {
 		case *message.Transaction:
-			la.analyzerProcessTransaction(child.(*message.Transaction))
+			la.analyzerProcessTransaction(domain, child.(*message.Transaction))
 		case *message.Event:
-			la.ea.logEvent(child.(*message.Event))
+			la.ea.logEvent(domain, child.(*message.Event))
 		}
 	}
 }

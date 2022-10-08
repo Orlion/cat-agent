@@ -47,7 +47,7 @@ Loop:
 	for {
 		select {
 		case eventWithDomain := <-ea.ch:
-			ea.getOrDefault(eventWithDomain.domain, eventWithDomain.event).add(eventWithDomain.event)
+			ea.getOrDefault(eventWithDomain).add(eventWithDomain.event)
 		case <-ticker.C:
 			ea.flush()
 		case <-ctx.Done():
@@ -59,8 +59,8 @@ Loop:
 
 	close(ea.ch)
 
-	for event := range ea.ch {
-		ea.getOrDefault(event).add(event)
+	for eventWithDomain := range ea.ch {
+		ea.getOrDefault(eventWithDomain).add(eventWithDomain.event)
 	}
 
 	ea.flush()
@@ -68,25 +68,37 @@ Loop:
 	log.Info("event aggregator exit")
 }
 
-func (ea *EventAggregator) logEvent(event *message.Event) {
+func (ea *EventAggregator) logEvent(domain string, event *message.Event) {
 	select {
-	case ea.ch <- event:
+	case ea.ch <- &eventWithDomain{domain, event}:
 	default:
 		log.Warnf("event aggregatro's ch is full, event: %s,%s  has been discarded", event.GetType(), event.GetName())
 	}
 }
 
-func (ea *EventAggregator) getOrDefault(domain string, event *message.Event) *eventData {
-	key := fmt.Sprintf("%s,%s", event.GetType(), event.GetName())
+func (ea *EventAggregator) getOrDefault(eventWithDomain *eventWithDomain) (data *eventData) {
+	key := fmt.Sprintf("%s,%s", eventWithDomain.event.GetType(), eventWithDomain.event.GetName())
 
-	data, exists := ea.datas[key]
-	if !exists {
+	if domainDatas, exists := ea.datas[eventWithDomain.domain]; exists {
+		if data, exists = domainDatas[key]; !exists {
+			data = &eventData{
+				t:     eventWithDomain.event.GetType(),
+				name:  eventWithDomain.event.GetName(),
+				count: 0,
+				fail:  0,
+			}
+
+			domainDatas[eventWithDomain.domain] = data
+		}
+	} else {
 		data = &eventData{
-			t:     event.GetType(),
-			name:  event.GetName(),
+			t:     eventWithDomain.event.GetType(),
+			name:  eventWithDomain.event.GetName(),
 			count: 0,
 			fail:  0,
 		}
+
+		ea.datas[eventWithDomain.domain] = map[string]*eventData{key: data}
 	}
 
 	return data
@@ -97,19 +109,24 @@ func (ea *EventAggregator) flush() {
 		return
 	}
 
-	trans := message.NewTransaction(config.TypeSystem, config.NameEventAggregator, message.SUCCESS, "", 0, nil, 0)
-	for _, data := range ea.datas {
-		event := message.NewEvent(data.t, data.name, message.SUCCESS, fmt.Sprintf("%c%d%c%d", config.BatchFlag, data.count, config.BatchSplit, data.fail), 0)
-		trans.AddChild(event)
+	for domain, domainDatas := range ea.datas {
+		trans := message.NewTransaction(config.TypeSystem, config.NameEventAggregator, message.SUCCESS, "", 0, nil, 0)
+
+		for _, data := range domainDatas {
+			event := message.NewEvent(data.t, data.name, message.SUCCESS, fmt.Sprintf("%c%d%c%d", config.BatchFlag, data.count, config.BatchSplit, data.fail), 0)
+			trans.AddChild(event)
+		}
+
+		tree := message.NewMessageTree()
+		tree.SetMessage(trans)
+		tree.SetDomain([]byte(domain))
+		tree.SetMessageId(CreateMessageId(domain))
+		tree.SetThreadGroupName(config.ThreadGroupNameCatAgent)
+		tree.SetThreadId(config.ThreadIdCatAgent)
+		tree.SetThreadName(config.ThreadNameCatAgent)
+		tree.SetDiscard(false)
+
+		Send(tree)
 	}
 
-	tree := message.NewMessageTree()
-	tree.SetMessage(trans)
-	tree.SetMessageId(GetNextId("todo"))
-	tree.SetThreadGroupName(config.ThreadGroupNameCatAgent)
-	tree.SetThreadId(config.ThreadIdCatAgent)
-	tree.SetThreadName(config.ThreadNameCatAgent)
-	tree.SetDiscard(false)
-
-	Send(tree)
 }

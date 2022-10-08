@@ -1,26 +1,27 @@
 package log
 
-import (
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-)
-
 type Config struct {
-	Level    zapcore.Level `yaml:"level"`
-	Filename string        `yaml:"filename"`
+	StdoutLevel string `yaml:"stdout_level"`
+	Level       string `yaml:"level"`
+	Filename    string `yaml:"filename"`
 }
 
 func withDefaultConf(config *Config) *Config {
 	if config == nil {
 		config = &Config{
-			Level: zap.ErrorLevel,
+			StdoutLevel: "info",
+			Level:       "error",
 		}
 
 		return config
 	}
 
-	if config.Level < zap.DebugLevel {
-		config.Level = zap.ErrorLevel
+	if config.StdoutLevel == "" {
+		config.StdoutLevel = "info"
+	}
+
+	if config.Level == "" {
+		config.Level = "error"
 	}
 
 	return config

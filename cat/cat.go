@@ -39,7 +39,7 @@ func (cat *Cat) send(tree *message.MessageTree) {
 	cat.manager.send(tree)
 }
 
-func (cat *Cat) getNextId(domain string) []byte {
+func (cat *Cat) createMessageId(domain string) []byte {
 	return cat.msgIdFactory.getNextId(domain)
 }
 
@@ -62,8 +62,8 @@ func Send(tree *message.MessageTree) {
 	catInstance.send(tree)
 }
 
-func GetNextId(domain string) []byte {
-	return catInstance.getNextId(domain)
+func CreateMessageId(domain string) []byte {
+	return catInstance.createMessageId(domain)
 }
 
 func Shutdown() {
