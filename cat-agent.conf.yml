@@ -7,3 +7,4 @@ cat:
 
 log:
   stdout_level: debug
+  filename: ./storage/cat.log

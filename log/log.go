@@ -15,7 +15,7 @@ func Init(config *Config) {
 
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
 	encoder := zapcore.NewConsoleEncoder(encoderConfig)
 
 	level, err := zapcore.ParseLevel(config.StdoutLevel)
@@ -26,23 +26,24 @@ func Init(config *Config) {
 	cores := make([]zapcore.Core, 1)
 	cores[0] = zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), level)
 
-	level, err = zapcore.ParseLevel(config.StdoutLevel)
-	if err != nil {
-		level = zapcore.ErrorLevel
-	}
 	if config.Filename != "" {
+		level, err = zapcore.ParseLevel(config.Level)
+		if err != nil {
+			level = zapcore.ErrorLevel
+		}
+
 		priority := zap.LevelEnablerFunc(func(lev zapcore.Level) bool {
 			return lev >= level
 		})
 		infoFileWriteSyncer := zapcore.AddSync(&lumberjack.Logger{
 			Filename:   config.Filename,
-			MaxSize:    2,
-			MaxBackups: 100,
-			MaxAge:     30,
-			Compress:   false,
+			MaxSize:    config.MaxSize,
+			MaxAge:     config.MaxAge,
+			MaxBackups: config.MaxBackups,
+			Compress:   config.Compress,
 		})
-		infoFileCore := zapcore.NewCore(encoder, infoFileWriteSyncer, priority)
-		cores = append(cores, infoFileCore)
+		core := zapcore.NewCore(encoder, infoFileWriteSyncer, priority)
+		cores = append(cores, core)
 	}
 
 	logger = zap.New(zapcore.NewTee(cores...)).Sugar()
@@ -76,7 +77,11 @@ func Errorf(template string, args ...interface{}) {
 	logger.Errorf(template, args...)
 }
 
-func Shutdown() {
-	logger.Info("log shutdown...")
+func Sync() {
 	logger.Sync()
+}
+
+func Shutdown() {
+	Info("log shutdown...")
+	Sync()
 }
