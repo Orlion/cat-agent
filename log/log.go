@@ -15,8 +15,7 @@ func Init(config *Config) {
 
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
-	encoder := zapcore.NewConsoleEncoder(encoderConfig)
+	encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 
 	level, err := zapcore.ParseLevel(config.StdoutLevel)
 	if err != nil {
@@ -24,7 +23,7 @@ func Init(config *Config) {
 	}
 
 	cores := make([]zapcore.Core, 1)
-	cores[0] = zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), level)
+	cores[0] = zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig), zapcore.AddSync(os.Stdout), level)
 
 	if config.Filename != "" {
 		level, err = zapcore.ParseLevel(config.Level)
@@ -42,7 +41,9 @@ func Init(config *Config) {
 			MaxBackups: config.MaxBackups,
 			Compress:   config.Compress,
 		})
-		core := zapcore.NewCore(encoder, infoFileWriteSyncer, priority)
+
+		encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
+		core := zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig), infoFileWriteSyncer, priority)
 		cores = append(cores, core)
 	}
 

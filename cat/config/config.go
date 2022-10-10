@@ -115,13 +115,17 @@ func (c *ConfigService) GetRouters() []string {
 	return c.routers
 }
 
+func (c *ConfigService) GetSample() float64 {
+	return atomicx.LoadFloat64(&c.sample)
+}
+
 func (c *ConfigService) updateSample(v string) {
 	sample, err := strconv.ParseFloat(v, 32)
 	if err != nil {
 		log.Warnf("Sample should be a valid float, %s given", v)
 	} else if math.Abs(sample-atomicx.LoadFloat64(&c.sample)) > 1e-9 {
 		atomicx.StoreFloat64(&c.sample, sample)
-		log.Infof("Sample rate has been set to %f%%", atomicx.LoadFloat64(&c.sample)*100)
+		log.Infof("Sample rate has been set to %f%%", sample*100)
 	}
 }
 

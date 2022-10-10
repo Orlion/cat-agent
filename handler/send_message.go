@@ -199,7 +199,7 @@ func (r *messageTreeReader) readMessageLine() (t byte, msg message.Message, err 
 
 	timestampInMillisInt64, _ := strconv.ParseInt(string(timestampInMillis), 10, 64)
 
-	rawDurationInMicros, err := r.readElement()
+	durationInMicros, err := r.readElement()
 	if err != nil {
 		return
 	}
@@ -215,8 +215,8 @@ func (r *messageTreeReader) readMessageLine() (t byte, msg message.Message, err 
 	case TypeT:
 		fallthrough
 	case TypeA:
-		rawDurationInMicrosInt64, _ := strconv.ParseInt(string(rawDurationInMicros), 10, 64)
-		msg = message.NewTransaction(string(mtype), string(name), string(status), string(data), timestampInMillisInt64, nil, rawDurationInMicrosInt64)
+		durationInMicrosInt64, _ := strconv.ParseInt(string(durationInMicros), 10, 64)
+		msg = message.NewTransaction(string(mtype), string(name), string(status), string(data), timestampInMillisInt64, nil, durationInMicrosInt64)
 	case TypeE:
 		msg = message.NewEvent(string(mtype), string(name), string(status), string(data), timestampInMillisInt64)
 	default:

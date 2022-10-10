@@ -2,9 +2,10 @@ server:
   addr: 127.0.0.1:2380
 
 cat:
-  domain: www.cat-agent-sample.com
+  domain: test.cat-agent-sample.com
   servers: ['127.0.0.1:8080']
 
 log:
   stdout_level: debug
+  level: error
   filename: ./storage/cat.log

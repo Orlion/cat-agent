@@ -2,6 +2,8 @@ package server
 
 import (
 	"bufio"
+	"errors"
+	"io"
 	"net"
 
 	"github.com/Orlion/cat-agent/log"
@@ -24,7 +26,11 @@ func (c *conn) serve() {
 
 		req, err := c.readRequest()
 		if err != nil {
-			log.Infof("conn read request error: %s", err)
+			if errors.Is(err, io.EOF) {
+				log.Infof("conn from %s closed", c.remoteAddr)
+			} else {
+				log.Errorf("conn read request from %s error: %s", c.remoteAddr, err.Error())
+			}
 			return
 		}
 

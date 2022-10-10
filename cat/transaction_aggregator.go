@@ -155,23 +155,25 @@ func (ta *TransactionAggregator) flush() {
 	}
 
 	for domain, domainDatas := range ta.datas {
-		trans := message.NewTransaction(config.TypeSystem, config.NameTransactionAggregator, message.SUCCESS, "", 0, nil, 0)
+		trans := message.NewTransaction(config.TypeSystem, config.NameTransactionAggregator, message.SUCCESS, "", time.Now().UnixNano()/time.Millisecond.Nanoseconds(), nil, 0)
 
 		for _, data := range domainDatas {
-			trans := message.NewTransaction(data.t, data.name, message.SUCCESS, data.encode(), 0, nil, 0)
-			trans.AddChild(trans)
+			child := message.NewTransaction(data.t, data.name, message.SUCCESS, data.encode(), time.Now().UnixNano()/time.Millisecond.Nanoseconds(), nil, 0)
+			trans.AddChild(child)
 		}
 
 		tree := message.NewMessageTree()
 		tree.SetMessage(trans)
-		tree.SetMessageId(CreateMessageId(domain))
+		messageId := CreateMessageId(domain)
+		tree.SetMessageId(messageId)
 		tree.SetThreadGroupName(config.ThreadGroupNameCatAgent)
 		tree.SetThreadId(config.ThreadIdCatAgent)
 		tree.SetThreadName(config.ThreadNameCatAgent)
 		tree.SetDiscard(false)
 		Send(tree)
+
+		log.Debugf("transaction aggregator flush, messageId: %s, ", messageId)
 	}
 
 	ta.datas = make(map[string]map[string]*transactionData)
-
 }

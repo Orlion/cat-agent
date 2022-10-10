@@ -223,7 +223,6 @@ func (c *Consumer) flush(nonblock bool) {
 		log.Warnf("error: %s occurred while setting write deadline, connection has been dropped", err.Error())
 		c.conn = nil
 	}
-
 	for {
 		n, err := c.conn.Write(c.buf.Bytes())
 		if err != nil {

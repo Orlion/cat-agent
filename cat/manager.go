@@ -3,6 +3,7 @@ package cat
 import (
 	"sync/atomic"
 
+	"github.com/Orlion/cat-agent/cat/config"
 	"github.com/Orlion/cat-agent/cat/message"
 	"github.com/Orlion/cat-agent/cat/sender"
 	"github.com/Orlion/cat-agent/log"
@@ -36,15 +37,15 @@ func (m *Manager) shutdown() {
 }
 
 func (m *Manager) send(tree *message.MessageTree) {
-	if tree.CanDiscard() && m.isHitSample() {
+	if tree.CanDiscard() && !m.hitSample() {
 		m.aggregator.aggregate(tree)
 	} else {
 		m.sender.Offer(tree)
 	}
 }
 
-func (m *Manager) isHitSample() bool {
-	var sampleRatio float64
+func (m *Manager) hitSample() bool {
+	sampleRatio := config.GetInstance().GetSample()
 
 	if sampleRatio >= 1.0 {
 		return true

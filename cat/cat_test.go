@@ -19,7 +19,7 @@ func testInit(domain string) error {
 		Shutdown()
 	} else {
 		log.Init(&log.Config{
-			StdoutLevel: "error",
+			StdoutLevel: "debug",
 		})
 	}
 

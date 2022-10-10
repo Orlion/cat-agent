@@ -89,17 +89,17 @@ func (f *MessageIdFactory) getDomainNextId(domain string) []byte {
 func (f *MessageIdFactory) run() {
 	now := time.Now()
 
-	buf := new(bytes.Buffer)
-	buf.WriteString(f.domain)
-	buf.WriteByte('-')
-	buf.Write(f.ipAddress)
-	buf.WriteByte('-')
+	ipAddressBuf := new(bytes.Buffer)
+	ipAddressBuf.WriteString(f.domain)
+	ipAddressBuf.WriteByte('-')
+	ipAddressBuf.Write(f.ipAddress)
+	ipAddressBuf.WriteByte('-')
 
 	f.mu.Lock()
 	f.hour = []byte(strconv.FormatInt(now.Unix()/3600, 10))
-	buf.Write(f.hour)
-	buf.WriteByte('-')
-	f.idPrefix = buf.Bytes()
+	ipAddressBuf.Write(f.hour)
+	ipAddressBuf.WriteByte('-')
+	f.idPrefix = ipAddressBuf.Bytes()
 	f.mu.Unlock()
 
 	next := now.Add(time.Hour)
@@ -114,17 +114,17 @@ func (f *MessageIdFactory) run() {
 			next = time.Date(next.Year(), next.Month(), next.Day(), next.Hour(), 0, 0, 0, next.Location())
 			timer.Reset(next.Sub(now))
 
-			buf.Reset()
-			buf.WriteString(f.domain)
-			buf.WriteByte('-')
-			buf.Write(f.ipAddress)
-			buf.WriteByte('-')
+			ipAddressBuf := new(bytes.Buffer)
+			ipAddressBuf.WriteString(f.domain)
+			ipAddressBuf.WriteByte('-')
+			ipAddressBuf.Write(f.ipAddress)
+			ipAddressBuf.WriteByte('-')
 
 			f.mu.Lock()
 			f.hour = []byte(strconv.FormatInt(now.Unix()/3600, 10))
-			buf.Write(f.hour)
-			buf.WriteByte('-')
-			f.idPrefix = buf.Bytes()
+			ipAddressBuf.Write(f.hour)
+			ipAddressBuf.WriteByte('-')
+			f.idPrefix = ipAddressBuf.Bytes()
 			for _, index := range f.m {
 				atomic.StoreUint32(index, 0)
 			}

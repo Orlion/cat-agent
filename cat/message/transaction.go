@@ -6,11 +6,11 @@ type Transaction struct {
 	durationInMicros int64
 }
 
-func NewTransaction(t, name, status, data string, timestampInMillis int64, children []Message, rawDurationInMicros int64) *Transaction {
+func NewTransaction(t, name, status, data string, timestampInMillis int64, children []Message, durationInMicros int64) *Transaction {
 	return &Transaction{
 		baseMessage:      newBaseMessage(t, name, status, data, timestampInMillis),
 		children:         children,
-		durationInMicros: rawDurationInMicros,
+		durationInMicros: durationInMicros,
 	}
 }
 

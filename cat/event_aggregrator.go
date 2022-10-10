@@ -110,23 +110,27 @@ func (ea *EventAggregator) flush() {
 	}
 
 	for domain, domainDatas := range ea.datas {
-		trans := message.NewTransaction(config.TypeSystem, config.NameEventAggregator, message.SUCCESS, "", 0, nil, 0)
+		trans := message.NewTransaction(config.TypeSystem, config.NameEventAggregator, message.SUCCESS, "", time.Now().UnixNano()/time.Millisecond.Nanoseconds(), nil, 0)
 
 		for _, data := range domainDatas {
-			event := message.NewEvent(data.t, data.name, message.SUCCESS, fmt.Sprintf("%c%d%c%d", config.BatchFlag, data.count, config.BatchSplit, data.fail), 0)
-			trans.AddChild(event)
+			child := message.NewEvent(data.t, data.name, message.SUCCESS, fmt.Sprintf("%c%d%c%d", config.BatchFlag, data.count, config.BatchSplit, data.fail), time.Now().UnixNano()/time.Millisecond.Nanoseconds())
+			trans.AddChild(child)
 		}
 
 		tree := message.NewMessageTree()
 		tree.SetMessage(trans)
 		tree.SetDomain([]byte(domain))
-		tree.SetMessageId(CreateMessageId(domain))
+		messageId := CreateMessageId(domain)
+		tree.SetMessageId(messageId)
 		tree.SetThreadGroupName(config.ThreadGroupNameCatAgent)
 		tree.SetThreadId(config.ThreadIdCatAgent)
 		tree.SetThreadName(config.ThreadNameCatAgent)
 		tree.SetDiscard(false)
 
 		Send(tree)
+
+		log.Debugf("event aggregator flush, messageId: %s, ", messageId)
 	}
 
+	ea.datas = make(map[string]map[string]*eventData)
 }
