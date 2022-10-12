@@ -3,11 +3,14 @@ package cat
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/Orlion/cat-agent/cat/config"
 	"github.com/Orlion/cat-agent/cat/message"
 	"github.com/Orlion/cat-agent/log"
+	"github.com/Orlion/cat-agent/pkg/timex"
 )
 
 type eventData struct {
@@ -110,10 +113,10 @@ func (ea *EventAggregator) flush() {
 	}
 
 	for domain, domainDatas := range ea.datas {
-		trans := message.NewTransaction(config.TypeSystem, config.NameEventAggregator, message.SUCCESS, "", time.Now().UnixNano()/time.Millisecond.Nanoseconds(), nil, 0)
+		trans := message.NewTransaction(config.TypeSystem, config.NameEventAggregator, message.SUCCESS, "", timex.NowUnixMillis(), nil, 0)
 
 		for _, data := range domainDatas {
-			child := message.NewEvent(data.t, data.name, message.SUCCESS, fmt.Sprintf("%c%d%c%d", config.BatchFlag, data.count, config.BatchSplit, data.fail), time.Now().UnixNano()/time.Millisecond.Nanoseconds())
+			child := message.NewEvent(data.t, data.name, message.SUCCESS, fmt.Sprintf("%c%d%c%d", config.BatchFlag, data.count, config.BatchSplit, data.fail), timex.NowUnixMillis())
 			trans.AddChild(child)
 		}
 
@@ -123,7 +126,7 @@ func (ea *EventAggregator) flush() {
 		messageId := CreateMessageId(domain)
 		tree.SetMessageId(messageId)
 		tree.SetThreadGroupName(config.ThreadGroupNameCatAgent)
-		tree.SetThreadId(config.ThreadIdCatAgent)
+		tree.SetThreadId([]byte(strconv.Itoa(os.Getpid())))
 		tree.SetThreadName(config.ThreadNameCatAgent)
 		tree.SetDiscard(false)
 

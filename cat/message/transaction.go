@@ -22,6 +22,10 @@ func (trans *Transaction) GetDurationInMicros() int64 {
 	return trans.durationInMicros
 }
 
+func (trans *Transaction) SetDurationInMicros(durationInMicros int64) {
+	trans.durationInMicros = durationInMicros
+}
+
 func (trans *Transaction) AddChild(child Message) {
 	trans.children = append(trans.children, child)
 }

@@ -8,12 +8,14 @@ const (
 	DefaultIp       = "127.0.0.1"
 	DefaultIpHex    = "7f000001"
 
-	TypeSystem = "System"
+	TypeSystem    = "System"
+	TypeHeartbeat = "Heartbeat"
 
-	NameReboot = "Reboot"
-
+	NameReboot                = "Reboot"
 	NameTransactionAggregator = "TransactionAggregator"
 	NameEventAggregator       = "EventAggregator"
+	NameStatus                = "Status"
+	NameStatusExtensionPrefix = "StatusExtension-"
 
 	BatchFlag  = '@'
 	BatchSplit = ';'
@@ -36,7 +38,6 @@ const (
 
 var (
 	BinaryProtocol          = []byte("NT1")
-	ThreadIdCatAgent        = []byte("0")
 	ThreadNameCatAgent      = []byte("cat-agent")
 	ThreadGroupNameCatAgent = []byte("cat-agent-group")
 )

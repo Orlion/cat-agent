@@ -87,13 +87,14 @@ func (f *MessageIdFactory) getDomainNextId(domain string) []byte {
 }
 
 func (f *MessageIdFactory) run() {
-	now := time.Now()
 
 	ipAddressBuf := new(bytes.Buffer)
 	ipAddressBuf.WriteString(f.domain)
 	ipAddressBuf.WriteByte('-')
 	ipAddressBuf.Write(f.ipAddress)
 	ipAddressBuf.WriteByte('-')
+
+	now := time.Now()
 
 	f.mu.Lock()
 	f.hour = []byte(strconv.FormatInt(now.Unix()/3600, 10))
@@ -105,20 +106,18 @@ func (f *MessageIdFactory) run() {
 	next := now.Add(time.Hour)
 	next = time.Date(next.Year(), next.Month(), next.Day(), next.Hour(), 0, 0, 0, next.Location())
 	timer := time.NewTimer(next.Sub(now))
+
 	go func() {
 		for {
 			<-timer.C
-
-			now = time.Now()
-			next = now.Add(time.Hour)
-			next = time.Date(next.Year(), next.Month(), next.Day(), next.Hour(), 0, 0, 0, next.Location())
-			timer.Reset(next.Sub(now))
 
 			ipAddressBuf := new(bytes.Buffer)
 			ipAddressBuf.WriteString(f.domain)
 			ipAddressBuf.WriteByte('-')
 			ipAddressBuf.Write(f.ipAddress)
 			ipAddressBuf.WriteByte('-')
+
+			now = time.Now()
 
 			f.mu.Lock()
 			f.hour = []byte(strconv.FormatInt(now.Unix()/3600, 10))
@@ -129,6 +128,10 @@ func (f *MessageIdFactory) run() {
 				atomic.StoreUint32(index, 0)
 			}
 			f.mu.Unlock()
+
+			next = now.Add(time.Hour)
+			next = time.Date(next.Year(), next.Month(), next.Day(), next.Hour(), 0, 0, 0, next.Location())
+			timer.Reset(next.Sub(now))
 		}
 	}()
 }

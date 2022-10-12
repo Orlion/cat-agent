@@ -167,7 +167,7 @@ func (c *ConfigService) updateBlock(v string) {
 			log.Info("cat has been enabled")
 		}
 	} else {
-		if atomic.SwapUint32(&c.enable, 0) == 0 {
+		if atomic.SwapUint32(&c.enable, 0) == 1 {
 			log.Info("cat has been disabled")
 		}
 	}

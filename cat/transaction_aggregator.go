@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/Orlion/cat-agent/cat/config"
 	"github.com/Orlion/cat-agent/cat/message"
 	"github.com/Orlion/cat-agent/log"
+	"github.com/Orlion/cat-agent/pkg/timex"
 )
 
 type transactionData struct {
@@ -155,19 +157,20 @@ func (ta *TransactionAggregator) flush() {
 	}
 
 	for domain, domainDatas := range ta.datas {
-		trans := message.NewTransaction(config.TypeSystem, config.NameTransactionAggregator, message.SUCCESS, "", time.Now().UnixNano()/time.Millisecond.Nanoseconds(), nil, 0)
+		trans := message.NewTransaction(config.TypeSystem, config.NameTransactionAggregator, message.SUCCESS, "", timex.NowUnixMillis(), nil, 0)
 
 		for _, data := range domainDatas {
-			child := message.NewTransaction(data.t, data.name, message.SUCCESS, data.encode(), time.Now().UnixNano()/time.Millisecond.Nanoseconds(), nil, 0)
+			child := message.NewTransaction(data.t, data.name, message.SUCCESS, data.encode(), timex.NowUnixMillis(), nil, 0)
 			trans.AddChild(child)
 		}
 
 		tree := message.NewMessageTree()
 		tree.SetMessage(trans)
+		tree.SetDomain([]byte(domain))
 		messageId := CreateMessageId(domain)
 		tree.SetMessageId(messageId)
 		tree.SetThreadGroupName(config.ThreadGroupNameCatAgent)
-		tree.SetThreadId(config.ThreadIdCatAgent)
+		tree.SetThreadId([]byte(strconv.Itoa(os.Getpid())))
 		tree.SetThreadName(config.ThreadNameCatAgent)
 		tree.SetDiscard(false)
 		Send(tree)
