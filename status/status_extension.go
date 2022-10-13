@@ -1,17 +1,26 @@
 package status
 
 import (
-	"runtime"
+	"fmt"
 	"strconv"
 
 	"github.com/Orlion/cat-agent/pkg/stringx"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/load"
+	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/net"
 )
 
 type CpuStatusExtension struct {
 	lastTime    *cpu.TimesStat
 	lastCPUTime float64
+}
+
+func newCpuStatusExtension() *CpuStatusExtension {
+	return &CpuStatusExtension{
+		lastTime:    new(cpu.TimesStat),
+		lastCPUTime: 0,
+	}
 }
 
 func (ext *CpuStatusExtension) GetId() string {
@@ -50,7 +59,6 @@ func (ext *CpuStatusExtension) GetProperties() map[string]string {
 
 			if ext.lastCPUTime > 0 {
 				cpuTime := currentCpuTime - ext.lastCPUTime
-
 				if cpuTime > 0.0 {
 					user := currentTime.User - ext.lastTime.User
 					system := currentTime.System - ext.lastTime.System
@@ -89,51 +97,67 @@ func (ext *CpuStatusExtension) GetProperties() map[string]string {
 }
 
 type MemStatusExtension struct {
-	m runtime.MemStats
+}
 
-	alloc,
-	mallocs,
-	lookups,
-	frees uint64
+func newMemStatusExtension() *MemStatusExtension {
+	return &MemStatusExtension{}
 }
 
 func (ext *MemStatusExtension) GetId() string {
-	return "mem.runtime"
+	return "mem"
 }
 
 func (ext *MemStatusExtension) GetDesc() string {
-	return "mem.runtime"
+	return "mem"
 }
 
 func (ext *MemStatusExtension) GetProperties() map[string]string {
-	runtime.ReadMemStats(&ext.m)
-
-	m := map[string]string{
-		"mem.sys": stringx.B2kbstr(ext.m.Sys),
-
-		// heap
-		"mem.heap.alloc":    stringx.B2kbstr(ext.m.HeapAlloc),
-		"mem.heap.sys":      stringx.B2kbstr(ext.m.HeapSys),
-		"mem.heap.idle":     stringx.B2kbstr(ext.m.HeapIdle),
-		"mem.heap.inuse":    stringx.B2kbstr(ext.m.HeapInuse),
-		"mem.heap.released": stringx.B2kbstr(ext.m.HeapReleased),
-		"mem.heap.objects":  strconv.Itoa(int(ext.m.HeapObjects)),
-
-		// stack
-		"mem.stack.inuse": stringx.B2kbstr(ext.m.StackInuse),
-		"mem.stack.sys":   stringx.B2kbstr(ext.m.StackSys),
+	m := make(map[string]string)
+	if stat, err := mem.VirtualMemory(); err == nil {
+		m = map[string]string{
+			"total":     strconv.FormatUint(stat.Total, 10),
+			"available": strconv.FormatUint(stat.Available, 10),
+			"used":      strconv.FormatUint(stat.Used, 10),
+			"free":      strconv.FormatUint(stat.Free, 10),
+			"shared":    strconv.FormatUint(stat.Shared, 10),
+			"buffers":   strconv.FormatUint(stat.Buffers, 10),
+			"cached":    strconv.FormatUint(stat.Cached, 10),
+		}
 	}
 
-	if ext.alloc > 0 {
-		m["mem.alloc"] = stringx.B2kbstr(ext.m.TotalAlloc - ext.alloc)
-		m["mem.mallocs"] = strconv.Itoa(int(ext.m.Mallocs - ext.mallocs))
-		m["mem.lookups"] = strconv.Itoa(int(ext.m.Lookups - ext.lookups))
-		m["mem.frees"] = strconv.Itoa(int(ext.m.Frees - ext.frees))
+	return m
+}
+
+type NetStatusExtension struct {
+}
+
+func newNetStatusExtension() *NetStatusExtension {
+	return &NetStatusExtension{}
+}
+
+func (ext *NetStatusExtension) GetId() string {
+	return "net"
+}
+
+func (ext *NetStatusExtension) GetDesc() string {
+	return "net"
+}
+
+func (ext *NetStatusExtension) GetProperties() map[string]string {
+	m := make(map[string]string)
+
+	if stats, err := net.IOCounters(false); err == nil && len(stats) > 0 {
+		m[fmt.Sprintf("net.%s.sent_bytes", stats[0].Name)] = strconv.FormatUint(stats[0].BytesSent, 10)
+		m[fmt.Sprintf("net.%s.recv_bytes", stats[0].Name)] = strconv.FormatUint(stats[0].BytesRecv, 10)
+		m[fmt.Sprintf("net.%s.sent_packets", stats[0].Name)] = strconv.FormatUint(stats[0].PacketsSent, 10)
+		m[fmt.Sprintf("net.%s.recv_packets", stats[0].Name)] = strconv.FormatUint(stats[0].PacketsRecv, 10)
+		m[fmt.Sprintf("net.%s.errin", stats[0].Name)] = strconv.FormatUint(stats[0].Errin, 10)
+		m[fmt.Sprintf("net.%s.errout", stats[0].Name)] = strconv.FormatUint(stats[0].Errout, 10)
+		m[fmt.Sprintf("net.%s.dropin", stats[0].Name)] = strconv.FormatUint(stats[0].Dropin, 10)
+		m[fmt.Sprintf("net.%s.dropout", stats[0].Name)] = strconv.FormatUint(stats[0].Dropout, 10)
+		m[fmt.Sprintf("net.%s.fifoin", stats[0].Name)] = strconv.FormatUint(stats[0].Fifoin, 10)
+		m[fmt.Sprintf("net.%s.fifoout", stats[0].Name)] = strconv.FormatUint(stats[0].Fifoout, 10)
 	}
-	ext.alloc = ext.m.TotalAlloc
-	ext.mallocs = ext.m.Mallocs
-	ext.lookups = ext.m.Lookups
-	ext.frees = ext.m.Frees
 
 	return m
 }

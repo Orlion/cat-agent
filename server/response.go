@@ -3,6 +3,8 @@ package server
 import (
 	"encoding/binary"
 	"time"
+
+	"github.com/Orlion/cat-agent/log"
 )
 
 type Status uint32
@@ -36,6 +38,8 @@ func (c *conn) sendResponse(status Status, payload []byte) (err error) {
 	binary.BigEndian.PutUint32(b, uint32(status))
 	binary.BigEndian.PutUint32(b[4:8], length)
 	copy(b[RespHeaderLen:], payload)
+
+	log.Debugf("send response to %s, status: %d, length: %d", c.rwc.RemoteAddr().String(), status, length)
 
 	var n int
 

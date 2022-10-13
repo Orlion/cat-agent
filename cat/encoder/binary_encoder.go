@@ -90,6 +90,8 @@ func (e *BinaryEncoder) encodeMessage(m message.Message) (err error) {
 		return e.encodeTransaction(m.(*message.Transaction))
 	case *message.Event:
 		return e.encodeEvent(m.(*message.Event))
+	case *message.Heartbeat:
+		return e.encodeHeartbeat(m.(*message.Heartbeat))
 	default:
 		return
 	}
@@ -126,6 +128,10 @@ func (e *BinaryEncoder) encodeTransaction(trans *message.Transaction) (err error
 
 func (e *BinaryEncoder) encodeEvent(event *message.Event) (err error) {
 	return e.encodeMessageWithLeader(event, 'E')
+}
+
+func (e *BinaryEncoder) encodeHeartbeat(heartbeat *message.Heartbeat) (err error) {
+	return e.encodeMessageWithLeader(heartbeat, 'H')
 }
 
 func (e *BinaryEncoder) encodeMessageWithLeader(m message.Message, leader rune) (err error) {

@@ -29,9 +29,9 @@ type ConfigService struct {
 	routers     []string
 	routersCond *sync.Cond
 	sample      float64
+	enable      uint32
 	done        chan struct{}
 	wg          *sync.WaitGroup
-	enable      uint32
 }
 
 func newConfigService(config *Config) (*ConfigService, error) {

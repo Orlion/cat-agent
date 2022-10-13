@@ -14,6 +14,7 @@ import (
 	"github.com/Orlion/cat-agent/handler"
 	"github.com/Orlion/cat-agent/log"
 	"github.com/Orlion/cat-agent/server"
+	"github.com/Orlion/cat-agent/status"
 )
 
 var confFilename string
@@ -38,6 +39,8 @@ func main() {
 		fmt.Fprintln(os.Stderr, "configuration file parse error: "+err.Error())
 		os.Exit(1)
 	}
+
+	status.Init()
 
 	srv := createServer(conf.Server)
 

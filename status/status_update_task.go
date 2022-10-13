@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/Orlion/cat-agent/cat"
@@ -17,10 +18,16 @@ import (
 
 type StatusUpdateTask struct {
 	statusExtensions []StatusExtension
+	done             chan struct{}
+	wg               *sync.WaitGroup
 }
 
-func newStatusUpdateTask() *StatusUpdateTask {
-	return &StatusUpdateTask{}
+func newStatusUpdateTask(statusExtensions []StatusExtension) *StatusUpdateTask {
+	return &StatusUpdateTask{
+		statusExtensions: statusExtensions,
+		done:             make(chan struct{}),
+		wg:               new(sync.WaitGroup),
+	}
 }
 
 func (t *StatusUpdateTask) buildHeartbeat() {
@@ -73,7 +80,7 @@ func (t *StatusUpdateTask) buildExtension() (string, []*message.Transaction) {
 				Details: make([]ExtensionDetail, 0),
 			}
 
-			for k, v := range statusExtension.GetProperties() {
+			for k, v := range properties {
 				detail := ExtensionDetail{
 					Id:    k,
 					Value: v,
@@ -99,11 +106,29 @@ func (t *StatusUpdateTask) buildExtension() (string, []*message.Transaction) {
 	return buf.String(), extensionTransList
 }
 
-func (s *StatusUpdateTask) run() {
+func (t *StatusUpdateTask) run() {
 	log.Info("status update task running...")
+	t.sendRebootEvent()
 
+	ticker := time.NewTicker(time.Minute)
+
+	t.wg.Add(1)
+	go func() {
+	Loop:
+		for {
+			select {
+			case <-ticker.C:
+				t.buildHeartbeat()
+			case <-t.done:
+				break Loop
+			}
+		}
+		t.wg.Done()
+	}()
+}
+
+func (t *StatusUpdateTask) sendRebootEvent() {
 	event := message.NewEvent(config.TypeSystem, config.NameReboot, message.SUCCESS, "", timex.NowUnixMillis())
-
 	domain := config.GetInstance().GetDomain()
 	tree := message.NewMessageTree()
 	tree.SetMessage(event)
@@ -114,15 +139,28 @@ func (s *StatusUpdateTask) run() {
 	tree.SetThreadId([]byte(strconv.Itoa(os.Getpid())))
 	tree.SetThreadName(config.ThreadNameCatAgent)
 	tree.SetDiscard(false)
-
 	cat.Send(tree)
 }
 
-func (s *StatusUpdateTask) shutdown() {
+func (t *StatusUpdateTask) shutdown() {
 	log.Info("status update task shutdown...")
+	close(t.done)
+	t.wg.Wait()
 	log.Info("status update task exit")
 }
 
-func Init() {
+var task *StatusUpdateTask
 
+func Init() {
+	task = newStatusUpdateTask([]StatusExtension{
+		newCpuStatusExtension(),
+		newMemStatusExtension(),
+		newNetStatusExtension(),
+	})
+
+	task.run()
+}
+
+func Shutdown() {
+	task.shutdown()
 }
