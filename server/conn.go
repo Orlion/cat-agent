@@ -31,20 +31,24 @@ func (c *conn) serve() {
 			} else {
 				log.Errorf("conn read request from %s error: %s", c.remoteAddr, err.Error())
 			}
-			return
+			break
 		}
 
 		if handler, exists := c.server.handlers[req.Cmd]; exists {
-			err = c.sendResponse(handler(req))
-			if err != nil {
-				log.Errorf("conn send response error: %s", err)
-				return
+			status, payload := handler(req)
+			if req.Cmd != CmdSendMessage {
+				err = c.sendResponse(status, payload)
+				if err != nil {
+					log.Errorf("conn send response error: %s", err)
+					break
+				}
 			}
+
 		} else {
 			err = c.sendResponse(StatusNotFoundCmd, nil)
 			if err != nil {
 				log.Errorf("conn send response error: %s", err)
-				return
+				break
 			}
 		}
 	}

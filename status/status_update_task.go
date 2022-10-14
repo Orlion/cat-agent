@@ -156,6 +156,9 @@ func Init() {
 		newCpuStatusExtension(),
 		newMemStatusExtension(),
 		newNetStatusExtension(),
+		newAgentRuntimeInfoExtension(),
+		newAgentRuntimeMemExtension(),
+		newAgentRuntimeGcExtension(),
 	})
 
 	task.run()

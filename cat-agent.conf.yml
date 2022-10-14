@@ -1,8 +1,8 @@
 server:
-  addr: 127.0.0.1:2380
+  addr: unix:///var/run/cat-agent.sock
 
 cat:
-  domain: test.cat-agent-sample.com
+  domain: demo.cat-agent.com
   servers: ['127.0.0.1:8080']
 
 log:

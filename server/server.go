@@ -55,12 +55,14 @@ func (srv *Server) Handle(cmd Cmd, handler Handler) {
 func (srv *Server) ListenAndServe() (err error) {
 	network := "tcp"
 
-	if strings.HasPrefix(srv.Addr, "unix:") {
-		os.Remove(srv.Addr)
+	addr := srv.Addr
+	if strings.HasPrefix(addr, "unix://") {
+		addr = strings.TrimPrefix(addr, "unix://")
+		os.Remove(addr)
 		network = "unix"
 	}
 
-	srv.listener, err = net.Listen(network, srv.Addr)
+	srv.listener, err = net.Listen(network, addr)
 	if err != nil {
 		return err
 	}

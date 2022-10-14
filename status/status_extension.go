@@ -2,7 +2,10 @@ package status
 
 import (
 	"fmt"
+	"runtime"
+	"runtime/debug"
 	"strconv"
+	"time"
 
 	"github.com/Orlion/cat-agent/pkg/stringx"
 	"github.com/shirou/gopsutil/cpu"
@@ -158,6 +161,107 @@ func (ext *NetStatusExtension) GetProperties() map[string]string {
 		m[fmt.Sprintf("net.%s.fifoin", stats[0].Name)] = strconv.FormatUint(stats[0].Fifoin, 10)
 		m[fmt.Sprintf("net.%s.fifoout", stats[0].Name)] = strconv.FormatUint(stats[0].Fifoout, 10)
 	}
+
+	return m
+}
+
+type AgentRuntimeInfoExtension struct {
+}
+
+func newAgentRuntimeInfoExtension() *AgentRuntimeInfoExtension {
+	return &AgentRuntimeInfoExtension{}
+}
+
+func (ext *AgentRuntimeInfoExtension) GetId() string {
+	return "agent.runtime.info"
+}
+
+func (ext *AgentRuntimeInfoExtension) GetDesc() string {
+	return "agent.runtime.info"
+}
+
+func (ext *AgentRuntimeInfoExtension) GetProperties() map[string]string {
+	n, _ := runtime.ThreadCreateProfile(nil)
+	return map[string]string{
+		"go_goroutines": strconv.Itoa(runtime.NumGoroutine()),
+		"go_threads":    strconv.Itoa(n),
+	}
+}
+
+type AgentRuntimeMemExtension struct {
+	lastStats *runtime.MemStats
+}
+
+func newAgentRuntimeMemExtension() *AgentRuntimeMemExtension {
+	return &AgentRuntimeMemExtension{}
+}
+
+func (ext *AgentRuntimeMemExtension) GetId() string {
+	return "agent.runtime.mem"
+}
+
+func (ext *AgentRuntimeMemExtension) GetDesc() string {
+	return "agent.runtime.mem"
+}
+
+func (ext *AgentRuntimeMemExtension) GetProperties() map[string]string {
+	stats := new(runtime.MemStats)
+	runtime.ReadMemStats(stats)
+	m := make(map[string]string)
+	if ext.lastStats != nil {
+		m["alloc"] = strconv.FormatUint(stats.Alloc, 10)
+		m["sys"] = strconv.FormatUint(stats.Sys, 10)
+		m["lookups"] = strconv.FormatUint(stats.Lookups, 10)
+		m["mallocs"] = strconv.FormatUint(stats.Mallocs-ext.lastStats.Mallocs, 10)
+		m["frees"] = strconv.FormatUint(stats.Frees-ext.lastStats.Frees, 10)
+		m["heap_alloc"] = strconv.FormatUint(stats.HeapAlloc, 10)
+		m["heap_sys"] = strconv.FormatUint(stats.HeapSys, 10)
+		m["heap_idle"] = strconv.FormatUint(stats.HeapIdle, 10)
+		m["heap_inuse"] = strconv.FormatUint(stats.HeapInuse, 10)
+		m["heap_released"] = strconv.FormatUint(stats.HeapReleased, 10)
+		m["heap_objects"] = strconv.FormatUint(stats.HeapObjects, 10)
+		m["stack_inuse"] = strconv.FormatUint(stats.StackInuse, 10)
+		m["stack_sys"] = strconv.FormatUint(stats.StackSys, 10)
+		m["mspan_inuse"] = strconv.FormatUint(stats.MSpanInuse, 10)
+		m["mspan_sys"] = strconv.FormatUint(stats.MSpanSys, 10)
+		m["mcache_inuse"] = strconv.FormatUint(stats.MCacheInuse, 10)
+		m["mcache_sys"] = strconv.FormatUint(stats.MCacheSys, 10)
+		m["buck_hash_sys"] = strconv.FormatUint(stats.BuckHashSys, 10)
+		m["gc_sys"] = strconv.FormatUint(stats.GCSys, 10)
+		m["other_sys"] = strconv.FormatUint(stats.OtherSys, 10)
+		m["gc_num"] = strconv.Itoa(int(stats.NumGC - ext.lastStats.NumGC))
+		m["gc_pause_ms"] = strconv.FormatUint((stats.PauseTotalNs-ext.lastStats.PauseTotalNs)/uint64(time.Millisecond.Nanoseconds()), 10)
+	}
+	ext.lastStats = stats
+
+	return m
+}
+
+type AgentRuntimeGcExtension struct {
+	lastStats *debug.GCStats
+}
+
+func newAgentRuntimeGcExtension() *AgentRuntimeGcExtension {
+	return &AgentRuntimeGcExtension{}
+}
+
+func (ext *AgentRuntimeGcExtension) GetId() string {
+	return "agent.runtime.gc"
+}
+
+func (ext *AgentRuntimeGcExtension) GetDesc() string {
+	return "agent.runtime.gc"
+}
+
+func (ext *AgentRuntimeGcExtension) GetProperties() map[string]string {
+	stats := new(debug.GCStats)
+	debug.ReadGCStats(stats)
+	m := make(map[string]string)
+	if ext.lastStats != nil {
+		m["num"] = strconv.FormatInt(stats.NumGC-ext.lastStats.NumGC, 10)
+		m["pause_ms"] = strconv.FormatInt(stats.PauseTotal.Milliseconds()-ext.lastStats.PauseTotal.Milliseconds(), 10)
+	}
+	ext.lastStats = stats
 
 	return m
 }
