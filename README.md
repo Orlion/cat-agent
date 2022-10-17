@@ -8,7 +8,7 @@ cat-agent是点评CAT server的一个agent。
 
 为了解决上述的问题，cat-agent通过在PHP应用所在机器上启动一个agent进程，PHP进程通过unix domain socket与agent通信来获取messgeId和发送cat log。cat log发送到agent之后并不是直接发出，而在在本地聚合之后再发出，降低了对cat server的请求次数。agent与cat server之间的连接会缓存到连接池中，降低连接数。
 
-![cat-agent架构](https://github.com/Orlion/cat-agent/raw/master/resources/architecture.png "cat-agent架构")
+![cat-agent架构](/Orlion/cat-agent/blob/main/resources/architecture.png "cat-agent架构")
 
 ## 使用
 ### 1. 启动agent进程
