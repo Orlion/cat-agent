@@ -17,6 +17,14 @@ type conn struct {
 }
 
 func (c *conn) serve() {
+	defer func() {
+		c.close()
+		c.server.decrConnNum()
+		if err := recover(); err != nil {
+			log.Errorf("conn serve panic, err: %v", err)
+		}
+	}()
+
 	c.remoteAddr = c.rwc.RemoteAddr().String()
 
 	for {
@@ -52,8 +60,6 @@ func (c *conn) serve() {
 			}
 		}
 	}
-
-	c.close()
 }
 
 func (c *conn) close() {

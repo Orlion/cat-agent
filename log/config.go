@@ -4,7 +4,7 @@ type Config struct {
 	StdoutLevel string `yaml:"stdout_level"`
 	Level       string `yaml:"level"`
 	Filename    string `yaml:"filename"`
-	MaxSize     int    `json:"maxsize" yaml:"maxsize"`
+	MaxSize     int    `yaml:"maxsize"`
 	MaxAge      int    `yaml:"maxage"`
 	MaxBackups  int    `yaml:"maxbackups"`
 	Compress    bool   `yaml:"compress"`

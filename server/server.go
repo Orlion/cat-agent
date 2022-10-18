@@ -108,7 +108,6 @@ func (srv *Server) serve() error {
 		log.Debugf("server new conn from %s", rw.RemoteAddr().String())
 		go func() {
 			c.serve()
-			srv.decrConnNum()
 		}()
 	}
 }

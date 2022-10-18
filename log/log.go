@@ -78,6 +78,10 @@ func Errorf(template string, args ...interface{}) {
 	logger.Errorf(template, args...)
 }
 
+func Panicf(template string, args ...interface{}) {
+	logger.Panicf(template, args...)
+}
+
 func Sync() {
 	logger.Sync()
 }
