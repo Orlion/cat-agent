@@ -12,10 +12,10 @@ func withDefaultConf(config *Config) {
 	}
 
 	if config.ReadTimeoutMillis < 1 {
-		config.ReadTimeoutMillis = 100
+		config.ReadTimeoutMillis = 5000
 	}
 
 	if config.WriteTimeoutMillis < 1 {
-		config.WriteTimeoutMillis = 100
+		config.WriteTimeoutMillis = 5000
 	}
 }
