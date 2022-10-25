@@ -37,7 +37,7 @@ func (s *TcpSender) Run() {
 	log.Info("tcp sender running...")
 
 	for _, router := range s.config.GetRouters() {
-		for i := 0; i < config.TcpSenderNormalQueueConsumerNum; i++ {
+		for i := 0; i < config.GetInstance().GetSenderNormalQueueConsumerNum(); i++ {
 			s.wg.Add(1)
 			go func(id int) {
 				newConsumer(id, router, "normal", s.normal).run()
@@ -45,7 +45,7 @@ func (s *TcpSender) Run() {
 			}(i)
 		}
 
-		for i := 0; i < config.TcpSenderHighQueueConsumerNum; i++ {
+		for i := 0; i < config.GetInstance().GetSenderHighQueueConsumerNum(); i++ {
 			s.wg.Add(1)
 			go func(id int) {
 				newConsumer(id, router, "high", s.high).run()

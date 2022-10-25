@@ -12,6 +12,8 @@ cat:
   domain: demo.cat-agent.com
   # Cat server addresses
   servers: ['127.0.0.1:8080', '127.0.0.2:8080', '127.0.0.3:8080']
+  sender_normal_queue_consumer_num: 10
+  sender_high_queue_consumer_num: 10
 
 log:
   # Stdout log level debug/info/warn/error/dpanic/panic/fatal

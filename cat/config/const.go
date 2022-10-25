@@ -23,10 +23,10 @@ const (
 	TcpSenderHighQueueSize   = 50000
 	TcpSenderNormalQueueSize = 50000
 
-	TcpSenderNormalQueueConsumerNum      = 10
-	TcpSenderHighQueueConsumerNum        = 10
-	TcpSenderQueueConsumerTickerDuration = 1000 * time.Millisecond
-	TcpSenderQueueConsumerBufSize        = 150
+	DefaultTcpSenderNormalQueueConsumerNum = 10
+	DefaultTcpSenderHighQueueConsumerNum   = 10
+	TcpSenderQueueConsumerTickerDuration   = 1000 * time.Millisecond
+	TcpSenderQueueConsumerBufSize          = 150
 
 	EventAggregatorTickerDuration       = 3 * time.Second
 	TransactionAggregatorTickerDuration = 3 * time.Second

@@ -15,12 +15,14 @@ import (
 )
 
 type Config struct {
-	Domain   string   `yaml:"domain"`
-	Hostname string   `yaml:"hostname"`
-	Env      string   `yaml:"env"`
-	Ip       string   `yaml:"ip"`
-	IpHex    string   `yaml:"ip_hex"`
-	Servers  []string `yaml:"servers"`
+	Domain                       string   `yaml:"domain"`
+	Hostname                     string   `yaml:"hostname"`
+	Env                          string   `yaml:"env"`
+	Ip                           string   `yaml:"ip"`
+	IpHex                        string   `yaml:"ip_hex"`
+	Servers                      []string `yaml:"servers"`
+	SenderNormalQueueConsumerNum int      `yaml:"sender_normal_queue_consumer_num"`
+	SenderHighQueueConsumerNum   int      `yaml:"sender_high_queue_consumer_num"`
 }
 
 type ConfigService struct {
@@ -107,6 +109,14 @@ func (c *ConfigService) GetIpHex() string {
 
 func (c *ConfigService) GetServers() []string {
 	return c.config.Servers
+}
+
+func (c *ConfigService) GetSenderNormalQueueConsumerNum() int {
+	return c.config.SenderNormalQueueConsumerNum
+}
+
+func (c *ConfigService) GetSenderHighQueueConsumerNum() int {
+	return c.config.SenderHighQueueConsumerNum
 }
 
 func (c *ConfigService) GetRouters() []string {
@@ -236,6 +246,22 @@ func withDefaultConf(config *Config) error {
 
 	if len(config.Servers) < 1 {
 		return errors.New("servers cannot be empty")
+	}
+
+	if config.SenderNormalQueueConsumerNum < 0 {
+		return errors.New("sender normal queue consumer num cannot be less than 0")
+	}
+
+	if config.SenderNormalQueueConsumerNum == 0 {
+		config.SenderNormalQueueConsumerNum = DefaultTcpSenderNormalQueueConsumerNum
+	}
+
+	if config.SenderHighQueueConsumerNum < 0 {
+		return errors.New("sender high queue consumer num cannot be less than 0")
+	}
+
+	if config.SenderHighQueueConsumerNum == 0 {
+		config.SenderHighQueueConsumerNum = DefaultTcpSenderHighQueueConsumerNum
 	}
 
 	return nil
